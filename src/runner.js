@@ -28,7 +28,7 @@ class Runner {
     }
     trigger(event, data) {
         if (this.vm) {
-            this.vm.runtime.startHat(event, data);
+            this.vm.postIOData(event, data);
             console.log(`[INFO] Triggered event: ${event}`, data);
         } else {
             console.error('[ERROR] VM is not initialized');

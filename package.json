@@ -1,5 +1,5 @@
 {
-  "name": "mcbot-backend",
+  "name": "scbackend-backend",
   "version": "0.0.1",
   "main": "./src/index.js",
   "scripts": {

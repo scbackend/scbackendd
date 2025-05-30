@@ -6,3 +6,5 @@ console.log('[INFO] Starting the backend server...');
 const manager = new Manager();
 const PORT = process.env.PORT || 3030;
 const server = new Server(PORT);
+server.init();
+server.start();

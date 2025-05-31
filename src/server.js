@@ -1,12 +1,34 @@
 import http from 'http';
 
 class Server {
-  constructor(port) {
+  constructor(port,projects) {
     this.port = port;
+    this.projects = projects;
   }
-  handler(req, res) {
+  async handler(req, res) {
     const { method, url, headers } = req;
     console.log(`[INFO] Received request: ${method} ${url}`);
+    if (method === 'GET' && /\/project\/*/.test(url)) {
+      console.log(`[INFO] Responding to project request: ${url}`);
+      const projectId = url.split('/')[2];
+        try {
+            const project = await this.projects.getProjectById(projectId);
+            if (project) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(project));
+            } else {
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                res.end('Project not found\n');
+            }
+        } catch (error) {
+            console.error(`[ERROR] Error fetching project: ${error.message}`);
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('Internal Server Error\n');
+        }
+        finally {
+            return;
+        }
+    }
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Hello, World!\n');
   }
@@ -23,7 +45,7 @@ class Server {
 
   start() {
     this.server.listen(this.port, () => {
-        console.log(`Server running at http://localhost:${this.port}/`);
+        console.log(`[INFO] Server running at http://localhost:${this.port}/`);
     });
   }
 }

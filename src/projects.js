@@ -21,23 +21,23 @@ class Projects {
         body: 'This is a test project body.',
       };
     }
-    const [rows] = await this.connection.execute(`SELECT * FROM projects WHERE id = ${id}`, [id]);
+    const [rows] = await this.connection.execute(`SELECT * FROM projects WHERE name = "${id}"`, [id]);
     return rows[0];
   }
 
   async createProject(projectData) {
     const { name, body } = projectData;
-    const [result] = await this.connection.execute(`INSERT INTO projects (name, body) VALUES (?, ?)`, [name, body]);
+    const [result] = await this.connection.execute(`INSERT INTO projects (name, body) VALUES ("?", "?")`, [name, body]);
     return result.insertId;
   }
 
-  async updateProject(id, projectData) {
+  async updateProject(projectData) {
     const { name, body } = projectData;
-    await this.connection.execute(`UPDATE projects SET name = ?, body = ? WHERE id = ?`, [name, body, id]);
+    await this.connection.execute(`UPDATE projects SET body = "?" WHERE name = "?"`, [name, body]);
   }
 
   async deleteProject(id) {
-    await this.connection.execute('DELETE FROM projects WHERE id = ?', [id]);
+    await this.connection.execute('DELETE FROM projects WHERE name = "?"', [id]);
   }
 }
 

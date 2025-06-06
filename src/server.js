@@ -8,6 +8,10 @@ class Server {
   async handler(req, res) {
     const { method, url, headers } = req;
     console.log(`[INFO] Received request: ${method} ${url}`);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'false');
     if (method === 'GET' && /\/project\/*/.test(url)) {
       console.log(`[INFO] Responding to project request: ${url}`);
       const projectId = url.split('/')[2];
@@ -28,6 +32,34 @@ class Server {
         finally {
             return;
         }
+    }
+    if (method === 'POST' && url === '/create') {
+      console.log(`[INFO] Responding to create request: ${url}`);
+      let body = '';
+      req.on('data', chunk => {
+        body += chunk.toString();
+      });
+      req.on('end', async () => {
+        console.log(`[INFO] Received body: ${body}`);
+        try {
+          const projectData = JSON.parse(body);
+          if (!projectData.name || !projectData.body) {
+            res.writeHead(400, { 'Content-Type': 'text/plain' });
+            res.end('Project name and body are required\n');
+            return;
+          }
+          await this.projects.createProject(projectData);
+          console.log(`[INFO] Project created: ${projectData.name}`);
+        } catch (error) {
+          console.error(`[ERROR] Error creating project: ${error.message}`);
+          // res.writeHead(500, { 'Content-Type': 'text/plain' });
+          // res.end('Internal Server Error\n');
+          return;
+        }
+        // res.writeHead(200, { 'Content-Type': 'text/plain' });
+        // res.end('Create project endpoint\n');
+        return;
+      });
     }
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Hello, World!\n');

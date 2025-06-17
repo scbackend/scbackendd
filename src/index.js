@@ -2,7 +2,8 @@ import Manager from './manager.js';
 import Server from './server.js';
 import process from 'process';
 import Projects from './projects.js';
-import dbconfig from './dbconfig.js';
+// import dbconfig from './dbconfig.js';
+import fs from 'fs';
 
 const main =() => {
     process.title = 'scbackendd';
@@ -11,6 +12,12 @@ const main =() => {
         process.exit(1);
     });
     console.log('[INFO] Starting the backend server...');
+    const dbconfigPath = './dbconfig.json';
+    let dbconfig = fs.existsSync(dbconfigPath) ? JSON.parse(fs.readFileSync(dbconfigPath, 'utf8')) : {};
+    if (!dbconfig.type) {
+        console.error('[ERROR] Database type not specified in dbconfig.json');
+        process.exit(1);
+    }
     const manager = new Manager();
     const projects = new Projects(dbconfig);
 

@@ -12,6 +12,11 @@ class Server {
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Allow-Credentials', 'false');
+    if (method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
     if (method === 'GET' && /\/project\/*/.test(url)) {
       console.log(`[INFO] Responding to project request: ${url}`);
       const projectId = url.split('/')[2];
@@ -50,19 +55,23 @@ class Server {
           }
           await this.projects.createProject(projectData);
           console.log(`[INFO] Project created: ${projectData.name}`);
+          res.writeHead(200, { 'Content-Type': 'text/plain' });
+          res.end('Create project success\n');
         } catch (error) {
           console.error(`[ERROR] Error creating project: ${error.message}`);
-          // res.writeHead(500, { 'Content-Type': 'text/plain' });
-          // res.end('Internal Server Error\n');
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end('Internal Server Error\n');
           return;
         }
-        // res.writeHead(200, { 'Content-Type': 'text/plain' });
-        // res.end('Create project endpoint\n');
         return;
       });
+      return;
     }
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Hello, World!\n');
+    if (method === 'GET' && url === '/'){
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('Hello, World!\n');
+    }
+    
   }
   init() {
     this.server = http.createServer(this.handler.bind(this));

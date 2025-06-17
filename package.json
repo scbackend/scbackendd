@@ -17,6 +17,7 @@
     "http": "^0.0.1-security",
     "mysql2": "^3.14.1",
     "process": "^0.11.10",
-    "scratch-vm": "^5.0.300"
+    "scratch-vm": "^5.0.300",
+    "sqlite3": "^5.1.7"
   }
 }

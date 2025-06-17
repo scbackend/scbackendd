@@ -13,6 +13,24 @@ const main =() => {
     });
     console.log('[INFO] Starting the backend server...');
     const dbconfigPath = './dbconfig.json';
+    if (!fs.existsSync(dbconfigPath)) {
+        //console.error('[ERROR] dbconfig.json not found. Please edit it with the required database configuration.');
+        //create a default dbconfig.json
+        const defaultDbConfig = `{
+            type: 'sqlite', // 'mysql' or 'sqlite'
+            // For SQLite, you can uncomment the following lines and comment the above lines
+            filename: 'scbackend.db',
+            // For MySQL, you can uncomment the following lines and comment the above lines
+            //host: 'localhost',
+            //port: 3306,
+            //user: 'root',
+            //password: '',
+        }`;
+        fs.writeFileSync(dbconfigPath, defaultDbConfig, 'utf8');
+        console.error('[INFO] A default dbconfig.json has been created. Please edit it with the required database configuration.');
+        console.error('[INFO] Exiting the process.');
+        process.exit(1);
+    }
     let dbconfig = fs.existsSync(dbconfigPath) ? JSON.parse(fs.readFileSync(dbconfigPath, 'utf8')) : {};
     if (!dbconfig.type) {
         console.error('[ERROR] Database type not specified in dbconfig.json');

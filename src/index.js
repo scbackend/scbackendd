@@ -17,15 +17,14 @@ const main =() => {
         //console.error('[ERROR] dbconfig.json not found. Please edit it with the required database configuration.');
         //create a default dbconfig.json
         const defaultDbConfig = `{
-            type: 'sqlite', // 'mysql' or 'sqlite'
-            // For SQLite, you can uncomment the following lines and comment the above lines
-            filename: 'scbackend.db',
-            // For MySQL, you can uncomment the following lines and comment the above lines
-            //host: 'localhost',
-            //port: 3306,
-            //user: 'root',
-            //password: '',
-        }`;
+    "type": "sqlite","or": "mysql",
+    "filename": "scbackend.db",
+    "host": "localhost",
+    "port": 3306,
+    "user": "root",
+    "password": "",
+    "database": "scbackend"
+}`;
         fs.writeFileSync(dbconfigPath, defaultDbConfig, 'utf8');
         console.error('[INFO] A default dbconfig.json has been created. Please edit it with the required database configuration.');
         console.error('[INFO] Exiting the process.');

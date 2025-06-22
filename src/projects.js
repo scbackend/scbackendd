@@ -37,6 +37,21 @@ class Projects {
     }
   }
 
+  async ensureTableExists() {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS projects (
+        name VARCHAR(64) PRIMARY KEY UNIQUE,
+        body LONGTEXT,
+        meta TEXT
+      )
+    `;
+    if (this.type === 'mysql') {
+      await this.connection.execute(createTableSQL);
+    } else if (this.type === 'sqlite') {
+      await this.connection.runAsync(createTableSQL);
+    }
+  }
+
   async getAllProjects() {
     if (this.type === 'mysql') {
       const [rows] = await this.connection.execute('SELECT * FROM projects');

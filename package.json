@@ -12,6 +12,14 @@
   },
   "author": "XQYWorld",
   "license": "GPL-3.0",
+  "keywords": [
+    "scratch",
+    "backend",
+    "server",
+    "scbackendd"
+  ],
+  "type": "module",
+  "private": false,
   "description": "",
   "dependencies": {
     "http": "^0.0.1-security",

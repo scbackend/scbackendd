@@ -31,8 +31,8 @@ const main =() => {
 }`;
         fs.writeFileSync(dbconfigPath, defaultDbConfig, 'utf8');
         console.error('[INFO] A default dbconfig.json has been created. Please edit it with the required database configuration.');
-        console.error('[INFO] Exiting the process.');
-        process.exit(1);
+        //console.error('[INFO] Exiting the process.');
+        //process.exit(1);
     }
     let dbconfig = fs.existsSync(dbconfigPath) ? JSON.parse(fs.readFileSync(dbconfigPath, 'utf8')) : {};
     if (!dbconfig.type) {

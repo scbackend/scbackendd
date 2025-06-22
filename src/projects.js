@@ -5,6 +5,11 @@ class Projects {
   constructor(dbConfig) {
     this.dbConfig = dbConfig;
     this.type = dbConfig.type;
+    switch (this.type) {
+      case 'mysql': this.dbConfig = dbConfig.mysql; break;
+      case 'sqlite': this.dbConfig = dbConfig.sqlite; break;
+      default: throw new Error('Unsupported database type');
+    }
     this.connection = null;
   }
 

@@ -18,12 +18,16 @@ const main =() => {
         //create a default dbconfig.json
         const defaultDbConfig = `{
     "type": "sqlite","or": "mysql",
-    "filename": "scbackend.db",
-    "host": "localhost",
-    "port": 3306,
-    "user": "root",
-    "password": "",
-    "database": "scbackend"
+    "sqlite": {
+        "filename": "scbackend.db"
+    },
+    "mysql": {
+        "host": "localhost",
+        "port": 3306,
+        "user": "root",
+        "password": "",
+        "database": "scbackend"
+    }
 }`;
         fs.writeFileSync(dbconfigPath, defaultDbConfig, 'utf8');
         console.error('[INFO] A default dbconfig.json has been created. Please edit it with the required database configuration.');

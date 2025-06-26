@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'fs';
 
 class Server {
   constructor(port, projects) {
@@ -53,6 +54,29 @@ class Server {
     this.app.get('/', (req, res) => {
       res.status(200).send('Hello, World!\n');
     });
+
+    this.app.get('/extensions/:id', (req, res) => {
+      const extensionId = req.params.id;
+      console.log(`[INFO] Responding to extension request: /extensions/${extensionId}`);
+      if (!/^[\w]+$/.test(extensionId)) {
+        res.status(400).send('Invalid extension id\n');
+        return;
+      }
+      const extensionPath = `./extensions/${extensionId}.js`;
+      try {
+        res.status(200).send(
+          fs.readFileSync(extensionPath, 'utf8')
+        );
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          console.error(`[ERROR] Extension not found: ${extensionId}`);
+          res.status(404).send('Extension not found\n');
+          return;
+        }
+        console.error(`[ERROR] Error loading extension: ${error.message}`);
+        res.status(500).send('Internal Server Error\n');
+      }
+    })
   }
 
   init() {

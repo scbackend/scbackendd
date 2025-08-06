@@ -3,4 +3,11 @@ dist/
 # Logs
 logs
 npm-debug.log*
+*.log
 rundir/
+# Env files
+.env
+# Test coverage
+coverage/
+# TypeScript build info
+*.tsbuildinfo

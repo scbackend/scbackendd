@@ -22,11 +22,12 @@
   "private": false,
   "description": "",
   "dependencies": {
+    "denque": "^2.1.0",
     "express": "^5.1.0",
     "http": "^0.0.1-security",
     "mysql2": "^3.14.1",
     "process": "^0.11.10",
-    "scratch-vm": "^5.0.300",
+    "scbackend-vm": "^5.0.300",
     "sqlite3": "^5.1.7",
     "ws": "^8.18.3"
   }

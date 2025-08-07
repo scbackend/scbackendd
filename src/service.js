@@ -2,7 +2,10 @@ const WebSocket = require('ws');
 
 class Service
 {
-    constructor(port = 8080) {
+    constructor(manager,port = 8080) {
+        this.manager = manager;
+        this.manager.addEventListener('message', this.handleEvent.bind(this));
+        this._handling = false;
         this.clients = new Set();
         this.wss = new WebSocket.Server({ port });
 
@@ -32,6 +35,15 @@ class Service
                 this.clients.delete(ws);
             });
         });
+    }
+
+    async handleEvent() {
+        if (this._handling) return;
+        this._handling = true;
+        while (this.manager.eventqueue.length > 0) {
+            const [event, data] = this.manager.eventqueue.shift();
+        }
+        this._handling = false;
     }
 
     handleMessage(ws, data) {

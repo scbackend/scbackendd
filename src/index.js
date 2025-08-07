@@ -55,10 +55,11 @@ const main =() => {
     const server = new Server(PORT, projects);
     server.init();
     server.start();
+    manager.eventLoop();
 };
 
 export default main;
 
-if(process.argv[1] === import.meta.url) {
-    main();
-}
+// if (process.argv[1] && process.argv[1].endsWith('index.js')) {
+//     main();
+// }

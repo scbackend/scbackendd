@@ -2,7 +2,7 @@
 
 一个将 Scratch 用作后端开发语言的软件。
 
-[English](README-EN.md)
+[English](docs/README-EN.md)
 
 ## 前置条件
 请确保您的设备已正确安装 Node.js 和 Git。

@@ -2,13 +2,20 @@ const WebSocket = require('ws');
 
 class Service
 {
-    constructor(manager,port = 8080) {
+    constructor(port, manager) {
+        this.port = port;
         this.manager = manager;
-        this.manager.addEventListener('message', this.handleEvent.bind(this));
         this._handling = false;
         this.clients = new Set();
-        this.wss = new WebSocket.Server({ port });
+        this.wss = null;
+    }
 
+    init() {
+        this.manager.addEventListener('message', this.handleEvent.bind(this));
+    }
+
+    start() {
+        this.wss = new WebSocket.Server({ port: this.port });
         this.wss.on('connection', (ws) => {
             this.clients.add(ws);
 

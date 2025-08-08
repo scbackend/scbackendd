@@ -2,6 +2,7 @@ import Manager from './manager.js';
 import Server from './server.js';
 import process from 'process';
 import Projects from './projects.js';
+import Service from './service.js';
 // import dbconfig from './dbconfig.js';
 import fs from 'fs';
 
@@ -51,11 +52,17 @@ const main =() => {
             process.exit(1);
         });
 
-    const PORT = process.env.PORT || 3030;
-    const server = new Server(PORT, projects);
+    const DASHPORT = process.env.DASHPORT || 3030;
+    const SERVPORT = process.env.SERVPORT || 3031;
+    const server = new Server(DASHPORT, projects);
+    const service = new Service(SERVPORT, manager);
+
     server.init();
     server.start();
+    service.init();
+    service.start();
     manager.eventLoop();
+    //manager.addRunner('testrunner');
 };
 
 export default main;

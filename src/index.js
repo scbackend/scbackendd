@@ -6,7 +6,7 @@ import Service from './service.js';
 // import dbconfig from './dbconfig.js';
 import fs from 'fs';
 
-const main =() => {
+const main =(rundir) => {
     process.title = 'scbackendd';
     process.on('uncaughtException', (error) => {
         console.error('[ERROR] Uncaught Exception:', error);
@@ -54,7 +54,7 @@ const main =() => {
 
     const DASHPORT = process.env.DASHPORT || 3030;
     const SERVPORT = process.env.SERVPORT || 3031;
-    const server = new Server(DASHPORT, projects);
+    const server = new Server(DASHPORT, rundir, projects, manager);
     const service = new Service(SERVPORT, manager);
 
     server.init();
@@ -62,7 +62,6 @@ const main =() => {
     service.init();
     service.start();
     manager.eventLoop();
-    //manager.addRunner('testrunner');
 };
 
 export default main;

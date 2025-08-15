@@ -47,6 +47,14 @@ class Runner {
                 console.error('[ERROR]Error fetching project:', error);
             });
     }
+    close() {
+        if (this.vm) {
+            this.vm.stop();
+            console.log('[INFO] VM stopped for runner:', this.id);
+        } else {
+            console.warn('[WARN] No VM to stop for runner:', this.id);
+        }
+    }
     trigger(event, data, callback) {
         if (this.vm) {
             this.vm.runtime.scbackend.eventqueue.push([event, data]);

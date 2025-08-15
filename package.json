@@ -1,6 +1,6 @@
 {
   "name": "scbackendd",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "main": "./src/index.js",
   "scripts": {
     "start": "node ./src/index.js",
@@ -11,7 +11,7 @@
     "scbackendd": "./bin/scbackendd.js"
   },
   "author": "XQYWorld",
-  "license": "GPL-3.0",
+  "license": "AGPL-3.0-only",
   "keywords": [
     "scratch",
     "backend",
@@ -26,9 +26,11 @@
     "express": "^5.1.0",
     "http": "^0.0.1-security",
     "mysql2": "^3.14.1",
+    "path": "^0.12.7",
     "process": "^0.11.10",
     "scbackend-vm": "^5.0.300",
     "sqlite3": "^5.1.7",
+    "url": "^0.11.4",
     "ws": "^8.18.3"
   }
 }

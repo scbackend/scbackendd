@@ -20,6 +20,15 @@ class Manager {
             console.warn(`[WARN] Runner already exists for ID: ${id}`);
         }
     }
+    removeRunner(id) {
+        if (this.runners[id]) {
+            this.runners[id].close();
+            delete this.runners[id];
+            console.log(`[INFO] Runner removed for ID: ${id}`);
+        } else {
+            console.warn(`[WARN] No runner found for ID: ${id}`);
+        }
+    }
     triggerRunnerEvent(id, event, data) {
         if (this.runners[id]) {
             this.runners[id].trigger(event, data);

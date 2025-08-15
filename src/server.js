@@ -1,10 +1,12 @@
 import express from 'express';
 import fs from 'fs';
+import path from 'path';
 
 class Server {
-  constructor(port, projects) {
+  constructor(port, rundir, projects, manager) {
     this.port = port;
     this.projects = projects;
+    this.manager = manager;
     this.app = express();
     this.app.use(express.json());
     this.app.use((req, res, next) => {
@@ -13,7 +15,7 @@ class Server {
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       res.setHeader('Access-Control-Allow-Credentials', 'false');
       if (req.method === 'OPTIONS') {
-        res.sendStatus(204);
+        res.status(204).send('GET, POST, OPTIONS\n');
       } else {
         next();
       }
@@ -76,7 +78,56 @@ class Server {
         console.error(`[ERROR] Error loading extension: ${error.message}`);
         res.status(500).send('Internal Server Error\n');
       }
-    })
+    });
+    this.app.get('/runner/add/:runnerId', (req, res) => {
+      const runnerId = req.params.runnerId;
+      console.log(`[INFO] Adding runner: ${runnerId}`);
+      if (!/^[\w-]+$/.test(runnerId)) {
+        res.status(400).send('Invalid runner id\n');
+        return;
+      }
+      try {
+        this.manager.addRunner(runnerId);
+      } catch (error) {
+        console.error(`[ERROR] Error adding runner: ${error.message}`);
+        res.status(500).send('Internal Server Error\n');
+        return;
+      }
+      console.log(`[INFO] Runner ${runnerId} added successfully`);
+      res.status(200).send(`Runner ${runnerId} added successfully\n`);
+    });
+    this.app.get('/runner/remove/:runnerId', (req, res) => {
+      const runnerId = req.params.runnerId;
+      console.log(`[INFO] Removing runner: ${runnerId}`);
+      if (!/^[\w-]+$/.test(runnerId)) {
+        res.status(400).send('Invalid runner id\n');
+        return;
+      }
+      try {
+        this.manager.removeRunner(runnerId);
+      } catch (error) {
+        console.error(`[ERROR] Error removing runner: ${error.message}`);
+        res.status(500).send('Internal Server Error\n');
+        return;
+      }
+      res.status(200).send(`Runner ${runnerId} removed successfully\n`);
+    });
+    this.app.get('/*', (req, res) => {
+      const requestedPath = req.path;
+      const localPath = path.resolve(rundir, 'public', requestedPath);
+      try {
+        const fileContent = fs.readFileSync(localPath, 'utf8');
+        res.status(200).send(fileContent);
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          console.error(`[ERROR] File not found: ${requestedPath}`);
+          res.status(404).send('File not found\n');
+          return;
+        }
+        console.error(`[ERROR] Error reading file: ${error.message}`);
+        res.status(500).send('Internal Server Error\n');
+      }
+    });
   }
 
   init() {

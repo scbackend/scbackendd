@@ -61,7 +61,6 @@ const main =(rundir) => {
     server.start();
     service.init();
     service.start();
-    manager.eventLoop();
 };
 
 export default main;

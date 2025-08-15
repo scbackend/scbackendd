@@ -7,6 +7,7 @@ class Server {
     this.port = port;
     this.projects = projects;
     this.manager = manager;
+    this.rundir = rundir;
     this.app = express();
     this.app.use(express.json());
     this.app.use((req, res, next) => {
@@ -51,10 +52,6 @@ class Server {
         console.error(`[ERROR] Error creating project: ${error.message}`);
         res.status(500).send('Internal Server Error\n');
       }
-    });
-
-    this.app.get('/', (req, res) => {
-      res.status(200).send('Hello, World!\n');
     });
 
     this.app.get('/extensions/:id', (req, res) => {
@@ -112,10 +109,13 @@ class Server {
       }
       res.status(200).send(`Runner ${runnerId} removed successfully\n`);
     });
-    this.app.get('/*', (req, res) => {
-      const requestedPath = req.path;
-      const localPath = path.resolve(rundir, 'public', requestedPath);
+    this.app.use((req, res) => {
+      const requestedPath = req.path.replace(/^\/+/, '');
+      let localPath = path.resolve(this.rundir, 'public', requestedPath);
       try {
+        if (fs.statSync(localPath).isDirectory()) {
+          localPath = path.join(localPath, 'index.html');
+        }
         const fileContent = fs.readFileSync(localPath, 'utf8');
         res.status(200).send(fileContent);
       } catch (error) {

@@ -1,11 +1,11 @@
 import VirtualMachine from 'scbackend-vm';
 import denque from 'denque';
-import getProjectUrl from './getprojecturl.js';
 
 class Runner {
-    constructor(id) {
+    constructor(id,project) {
         this.vm = new VirtualMachine();
         this.id = id;
+        this.project = project;
         this.vm.setTurboMode(true);
         this.eventqueue = new denque();
         this.exts = [
@@ -22,10 +22,13 @@ class Runner {
         for (const ext of this.exts) {
             this.vm.extensionManager.loadExtensionIdSync(ext);
         }
-        fetch(getProjectUrl(this.id))
-            .then(response => response.json())
+        this.project.getProjectBodyById(this.id)
+            .then(buffer => {
+                const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+                return arrayBuffer;
+            })
             .then(project => {
-                this.vm.loadProject(project['body'])
+                this.vm.loadProject(project)
                     .then(() => {
                         this.vm.runtime.scbackend = {};
                         this.vm.runtime.scbackend.eventqueue = new denque();
@@ -48,11 +51,18 @@ class Runner {
             });
     }
     close() {
-        if (this.vm) {
-            this.vm.stop();
+        try {
+            if (this.vm) {
+            this.vm.stopAll();
+            this.vm.clear();
+            delete this.vm;
             console.log('[INFO] VM stopped for runner:', this.id);
-        } else {
+            } else {
             console.warn('[WARN] No VM to stop for runner:', this.id);
+            }
+        } catch (e) {
+            delete this.vm;
+            console.warn('[WARN] Error stopping VM, deleted instance for runner:', this.id,);
         }
     }
     trigger(event, data, callback) {

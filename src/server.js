@@ -1,6 +1,7 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 class Server {
   constructor(port, rundir, projects, manager) {
@@ -8,32 +9,89 @@ class Server {
     this.projects = projects;
     this.manager = manager;
     this.rundir = rundir;
+    this.token = null;
+    this.config = this.loadConfig();
+    this.safepath = this.config.safepath || 'dashboard';
+
     this.app = express();
     this.app.use(express.json());
     this.app.use((req, res, next) => {
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cache-Control');
       res.setHeader('Access-Control-Allow-Credentials', 'false');
       if (req.method === 'OPTIONS') {
-        res.status(204).send('GET, POST, OPTIONS\n');
+        res.status(200).send('GET, POST, OPTIONS\n');
       } else {
         next();
       }
     });
 
+    // 登录路由
+    this.app.post('/login', (req, res) => {
+      const { username, password } = req.body;
+      if (
+        username === this.config.username &&
+        password === this.config.password
+      ) {
+        // 生成新 token
+        this.token = crypto.randomBytes(32).toString('hex');
+        res.status(200).json({ token: this.token });
+      } else {
+        res.status(401).json({ error: 'Invalid username or password' });
+      }
+    });
+
+    this.app.use((req, res, next) => {
+      if (req.path === '/login') return next();
+      const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(403).json({ error: 'Forbidden: Missing Bearer token' });
+      }
+      const token = authHeader.slice(7);
+      if (token !== this.token) {
+        return res.status(403).json({ error: 'Forbidden: Invalid token' });
+      }
+      next();
+    });
+
     this.app.get('/project/:id', async (req, res) => {
       const projectId = req.params.id;
+      const filePath = path.resolve('.', 'projects', `${projectId}.sb3`);
       try {
-        const project = await this.projects.getProjectById(projectId);
-        if (project) {
-          res.status(200).json(project);
-        } else {
-          res.status(404).send('Project not found\n');
-        }
+      if (!fs.existsSync(filePath)) {
+        res.status(404).json({ error: 'Project file not found' });
+        return;
+      }
+      const fileBuffer = fs.readFileSync(filePath);
+      res.setHeader('Content-Type', 'application/zip');
+      res.status(200).send(fileBuffer);
       } catch (error) {
-        console.error(`[ERROR] Error fetching project: ${error.message}`);
-        res.status(500).send('Internal Server Error\n');
+      console.error(`[ERROR] Error reading project file: ${error.message}`);
+      res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.use('/project/:id', express.raw({ type: 'application/octet-stream', limit: '50mb' }));
+    this.app.post('/project/:id', async (req, res) => {
+      const projectId = req.params.id;
+      const projectData = req.body;
+      try {
+        if (!projectData) {
+          res.status(400).json({ error: 'Project body is required' });
+          return;
+        }
+        const filePath = path.resolve('.', 'projects', `${projectId}.sb3`);
+        const dirpath = path.dirname(filePath);
+        if (!fs.existsSync(dirpath)) {
+          fs.mkdirSync(dirpath, { recursive: true });
+        }
+        fs.writeFileSync(filePath, projectData, 'binary');
+        console.log(`[INFO] Project updated: ${projectId}`);
+        res.status(200).json({ message: 'Project updated successfully' });
+      } catch (error) {
+        console.error(`[ERROR] Error updating project: ${error.message}`);
+        res.status(500).json({ error: 'Internal Server Error' });
       }
     });
 
@@ -42,92 +100,104 @@ class Server {
       const projectData = req.body;
       try {
         if (!projectData.name || !projectData.body) {
-          res.status(400).send('Project name and body are required\n');
+          res.status(400).json({ error: 'Project name and body are required' });
           return;
         }
         await this.projects.createProject(projectData);
         console.log(`[INFO] Project created: ${projectData.name}`);
-        res.status(200).send('Create project success\n');
+        res.status(200).json({ message: 'Create project success' });
       } catch (error) {
         console.error(`[ERROR] Error creating project: ${error.message}`);
-        res.status(500).send('Internal Server Error\n');
-      }
-    });
-
-    this.app.get('/extensions/:id', (req, res) => {
-      const extensionId = req.params.id;
-      console.log(`[INFO] Responding to extension request: /extensions/${extensionId}`);
-      if (!/^[\w]+$/.test(extensionId)) {
-        res.status(400).send('Invalid extension id\n');
-        return;
-      }
-      const extensionPath = `./extensions/${extensionId}.js`;
-      try {
-        res.status(200).send(
-          fs.readFileSync(extensionPath, 'utf8')
-        );
-      } catch (error) {
-        if (error.code === 'ENOENT') {
-          console.error(`[ERROR] Extension not found: ${extensionId}`);
-          res.status(404).send('Extension not found\n');
-          return;
-        }
-        console.error(`[ERROR] Error loading extension: ${error.message}`);
-        res.status(500).send('Internal Server Error\n');
+        res.status(500).json({ error: 'Internal Server Error' });
       }
     });
     this.app.get('/runner/add/:runnerId', (req, res) => {
       const runnerId = req.params.runnerId;
       console.log(`[INFO] Adding runner: ${runnerId}`);
       if (!/^[\w-]+$/.test(runnerId)) {
-        res.status(400).send('Invalid runner id\n');
+        res.status(400).json({ error: 'Invalid runner id' });
         return;
       }
       try {
         this.manager.addRunner(runnerId);
       } catch (error) {
         console.error(`[ERROR] Error adding runner: ${error.message}`);
-        res.status(500).send('Internal Server Error\n');
+        res.status(500).json({ error: 'Internal Server Error' });
         return;
       }
       console.log(`[INFO] Runner ${runnerId} added successfully`);
-      res.status(200).send(`Runner ${runnerId} added successfully\n`);
+      res.status(200).json({ message: `Runner ${runnerId} added successfully` });
     });
     this.app.get('/runner/remove/:runnerId', (req, res) => {
       const runnerId = req.params.runnerId;
       console.log(`[INFO] Removing runner: ${runnerId}`);
       if (!/^[\w-]+$/.test(runnerId)) {
-        res.status(400).send('Invalid runner id\n');
+        res.status(400).json({ error: 'Invalid runner id' });
         return;
       }
       try {
         this.manager.removeRunner(runnerId);
       } catch (error) {
         console.error(`[ERROR] Error removing runner: ${error.message}`);
-        res.status(500).send('Internal Server Error\n');
+        res.status(500).json({ error: 'Internal Server Error' });
         return;
       }
-      res.status(200).send(`Runner ${runnerId} removed successfully\n`);
+      res.status(200).json({ message: `Runner ${runnerId} removed successfully` });
     });
-    this.app.use((req, res) => {
-      const requestedPath = req.path.replace(/^\/+/, '');
-      let localPath = path.resolve(this.rundir, 'public', requestedPath);
+    this.app.get('/projects', async (req, res) => {
       try {
-        if (fs.statSync(localPath).isDirectory()) {
-          localPath = path.join(localPath, 'index.html');
-        }
-        const fileContent = fs.readFileSync(localPath, 'utf8');
-        res.status(200).send(fileContent);
+        const projects = await this.projects.getAllProjects();
+        res.status(200).json(projects);
       } catch (error) {
-        if (error.code === 'ENOENT') {
-          console.error(`[ERROR] File not found: ${requestedPath}`);
-          res.status(404).send('File not found\n');
-          return;
-        }
-        console.error(`[ERROR] Error reading file: ${error.message}`);
-        res.status(500).send('Internal Server Error\n');
+        console.error(`[ERROR] Error fetching projects: ${error.message}`);
+        res.status(500).json({ error: 'Internal Server Error' });
       }
     });
+
+    this.app.get('/runners', (req, res) => {
+      try {
+        const runnerIds = this.manager.runners ? Object.keys(this.manager.runners) : [];
+        res.status(200).json(runnerIds);
+      } catch (error) {
+        console.error(`[ERROR] Error fetching runners: ${error.message}`);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.get('/project/delete/:id', async (req, res) => {
+      const projectId = req.params.id;
+      try {
+        await this.projects.deleteProject(projectId);
+        res.status(200).json({ message: 'Project deleted' });
+      } catch (error) {
+        console.error(`[ERROR] Error deleting project: ${error.message}`);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.post('/project/update/:id', async (req, res) => {
+      const projectId = req.params.id;
+      const { body } = req.body;
+      try {
+        await this.projects.updateProject({ name: projectId, body });
+        res.status(200).json({ message: 'Project updated' });
+      } catch (error) {
+        console.error(`[ERROR] Error updating project: ${error.message}`);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+    
+  }
+
+  loadConfig() {
+    const configPath = path.resolve('.', 'config.json');
+    try {
+      const configRaw = fs.readFileSync(configPath, 'utf8');
+      return JSON.parse(configRaw);
+    } catch (e) {
+      console.error('[ERROR] Failed to load config.json:', e.message);
+      return { username: 'scbackend', password: 'scbackend/******' };
+    }
   }
 
   init() {

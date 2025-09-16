@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import sqlite3 from 'sqlite3';
+import fs from 'fs';
 
 class Projects {
   constructor(dbConfig) {
@@ -73,6 +74,10 @@ class Projects {
     } else if (this.type === 'sqlite') {
       return await this.connection.getAsync('SELECT * FROM projects WHERE name = ?', [id]);
     }
+  }
+
+  async getProjectBodyById(id) {
+    return await fs.promises.readFile(`./projects/${id}.sb3`);
   }
 
   async createProject(projectData) {

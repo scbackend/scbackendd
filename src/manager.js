@@ -2,15 +2,16 @@ import Runner from "./runner.js";
 import denque from 'denque';
 
 class Manager {
-    constructor() {
+    constructor(project) {
         this.runners = {};
+        this.project = project;
         this.eventqueue = new denque();
         this._handling = false;
         this.eventbinding = {};
     }
     addRunner(id) {
         if (!this.runners[id]) {
-            this.runners[id] = new Runner(id);
+            this.runners[id] = new Runner(id, this.project);
             this.runners[id]._handling = false;
             console.log(`[INFO] Runner added for ID: ${id}`);
             this.runners[id].init((vm) => {

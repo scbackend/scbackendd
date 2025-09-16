@@ -40,8 +40,8 @@ const main =(rundir) => {
         console.error('[ERROR] Database type not specified in dbconfig.json');
         process.exit(1);
     }
-    const manager = new Manager();
     const projects = new Projects(dbconfig);
+    const manager = new Manager(projects);
 
     projects.connect()
         .then(() => {

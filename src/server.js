@@ -42,6 +42,10 @@ class Server {
       }
     });
 
+    this.app.use('/', express.static(path.resolve(this.rundir, 'public')));
+    this.app.use('/favicon.ico', express.static(path.resolve(this.rundir, 'public')));
+    this.app.use(new RegExp(`^\/static\/*$`), express.static(path.resolve(this.rundir, 'public')));
+
     this.app.use((req, res, next) => {
       if (req.path === '/login') return next();
       const authHeader = req.headers['authorization'] || req.headers['Authorization'];

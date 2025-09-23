@@ -8,4 +8,6 @@ export default defineConfig({
   outDir: 'dist',
   minify: true,
   clean: true,
+  silent: true,
+  onSuccess: 'node obfuscate.cjs',
 })

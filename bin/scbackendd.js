@@ -3,6 +3,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import main from '../src/index.js';
 
-const dir = path.resolve(__dirname, '..');
+const dir = () => {
+    try {
+        return path.resolve(__dirname, '..');
+    } catch {
+        return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    }
+}
 
-main(dir);
+main(dir());

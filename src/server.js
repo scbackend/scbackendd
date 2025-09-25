@@ -2,6 +2,8 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import logger from './logger.js';
+import Config from './config.js';
 
 class Server {
   constructor(port, rundir, projects, manager) {
@@ -43,7 +45,9 @@ class Server {
     });
 
     this.app.use('/', express.static(path.resolve(this.rundir, 'public')));
-    this.app.use('/favicon.ico', express.static(path.resolve(this.rundir, 'public')));
+    this.app.get('/favicon.ico', (req, res) => {
+      res.sendFile(path.resolve(this.rundir, 'public', 'favicon.ico'));
+    });
     this.app.use(new RegExp(`^\/static\/*$`), express.static(path.resolve(this.rundir, 'public')));
 
     this.app.use((req, res, next) => {
@@ -100,7 +104,7 @@ class Server {
     });
 
     this.app.post('/create', async (req, res) => {
-      console.log(`[INFO] Responding to create request: /create`);
+      logger.log(`[INFO] Responding to create request: /create`);
       const projectData = req.body;
       try {
         if (!projectData.name || !projectData.body) {
@@ -108,16 +112,16 @@ class Server {
           return;
         }
         await this.projects.createProject(projectData);
-        console.log(`[INFO] Project created: ${projectData.name}`);
+        logger.log(`[INFO] Project created: ${projectData.name}`);
         res.status(200).json({ message: 'Create project success' });
       } catch (error) {
-        console.error(`[ERROR] Error creating project: ${error.message}`);
+        logger.error(`[ERROR] Error creating project: ${error.message}`);
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
     this.app.get('/runner/add/:runnerId', (req, res) => {
       const runnerId = req.params.runnerId;
-      console.log(`[INFO] Adding runner: ${runnerId}`);
+      logger.log(`[INFO] Adding runner: ${runnerId}`);
       if (!/^[\w-]+$/.test(runnerId)) {
         res.status(400).json({ error: 'Invalid runner id' });
         return;
@@ -125,16 +129,16 @@ class Server {
       try {
         this.manager.addRunner(runnerId);
       } catch (error) {
-        console.error(`[ERROR] Error adding runner: ${error.message}`);
+        logger.error(`[ERROR] Error adding runner: ${error.message}`);
         res.status(500).json({ error: 'Internal Server Error' });
         return;
       }
-      console.log(`[INFO] Runner ${runnerId} added successfully`);
+      logger.log(`[INFO] Runner ${runnerId} added successfully`);
       res.status(200).json({ message: `Runner ${runnerId} added successfully` });
     });
     this.app.get('/runner/remove/:runnerId', (req, res) => {
       const runnerId = req.params.runnerId;
-      console.log(`[INFO] Removing runner: ${runnerId}`);
+      logger.log(`[INFO] Removing runner: ${runnerId}`);
       if (!/^[\w-]+$/.test(runnerId)) {
         res.status(400).json({ error: 'Invalid runner id' });
         return;
@@ -142,7 +146,7 @@ class Server {
       try {
         this.manager.removeRunner(runnerId);
       } catch (error) {
-        console.error(`[ERROR] Error removing runner: ${error.message}`);
+        logger.error(`[ERROR] Error removing runner: ${error.message}`);
         res.status(500).json({ error: 'Internal Server Error' });
         return;
       }
@@ -153,7 +157,7 @@ class Server {
         const projects = await this.projects.getAllProjects();
         res.status(200).json(projects);
       } catch (error) {
-        console.error(`[ERROR] Error fetching projects: ${error.message}`);
+        logger.error(`[ERROR] Error fetching projects: ${error.message}`);
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
@@ -163,7 +167,7 @@ class Server {
         const runnerIds = this.manager.runners ? Object.keys(this.manager.runners) : [];
         res.status(200).json(runnerIds);
       } catch (error) {
-        console.error(`[ERROR] Error fetching runners: ${error.message}`);
+        logger.error(`[ERROR] Error fetching runners: ${error.message}`);
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
@@ -174,7 +178,7 @@ class Server {
         await this.projects.deleteProject(projectId);
         res.status(200).json({ message: 'Project deleted' });
       } catch (error) {
-        console.error(`[ERROR] Error deleting project: ${error.message}`);
+        logger.error(`[ERROR] Error deleting project: ${error.message}`);
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
@@ -186,7 +190,7 @@ class Server {
         await this.projects.updateProject({ name: projectId, body });
         res.status(200).json({ message: 'Project updated' });
       } catch (error) {
-        console.error(`[ERROR] Error updating project: ${error.message}`);
+        logger.error(`[ERROR] Error updating project: ${error.message}`);
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
@@ -194,28 +198,22 @@ class Server {
   }
 
   loadConfig() {
-    const configPath = path.resolve('.', 'config.json');
-    try {
-      const configRaw = fs.readFileSync(configPath, 'utf8');
-      return JSON.parse(configRaw);
-    } catch (e) {
-      console.error('[ERROR] Failed to load config.json:', e.message);
-      return { username: 'scbackend', password: 'scbackend/******' };
-    }
+    return new Config( 'config.yml', 'yaml', {
+      username: 'admin',
+      password: 'admin',
+    }).get();
   }
-
   init() {
     this.app.on('error', (err) => {
-      console.error(`[ERROR] Server error: ${err.message}`);
+      logger.error(`[ERROR] Server error: ${err.message}`);
     });
     this.app.on('listening', () => {
-      console.log(`[INFO] Server is listening on port ${this.port}`);
+      logger.log(`[INFO] Server is listening on port ${this.port}`);
     });
   }
-
   start(port) {
     this.app.listen((port?port:this.port), () => {
-      console.log(`[INFO] Server running at http://localhost:${this.port}/`);
+      logger.log(`[INFO] Server running at http://localhost:${this.port}/`);
     });
   }
 }

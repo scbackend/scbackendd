@@ -1,5 +1,6 @@
 import VirtualMachine from 'scbackend-vm';
 import denque from 'denque';
+import logger from './logger.js';
 
 class Runner {
     constructor(id,project) {
@@ -9,16 +10,10 @@ class Runner {
         this.vm.setTurboMode(true);
         this.eventqueue = new denque();
         this.exts = [
-            'event',
-            'control',
-            'operators',
-            'variables',
-            'myBlocks',
             'scbackendbasic',
         ];
     }
     init(callback, handleEvent) {
-        // this.vm.extensionManager.loadExtensionIdSync('scbackendbasic');
         for (const ext of this.exts) {
             this.vm.extensionManager.loadExtensionIdSync(ext);
         }
@@ -37,17 +32,17 @@ class Runner {
                             if (handleEvent) handleEvent(this.id);
                         }
                         this.vm.start();
-                        console.log('[INFO] Project loaded and VM started for runner:', this.id);
+                        logger.log(`[INFO] Project loaded and VM started for runner: ${this.id}`);
                         if (callback && typeof callback === 'function') {
                             callback(this.vm);
                         }
                     })
                     .catch(error => {
-                        console.error('[ERROR] Error loading project:', error);
+                        logger.error(`[ERROR] Error loading project: ${error}`);
                     });
             })
             .catch(error => {
-                console.error('[ERROR]Error fetching project:', error);
+                logger.error(`[ERROR]Error fetching project: ${error}`);
             });
     }
     close() {
@@ -56,22 +51,22 @@ class Runner {
             this.vm.stopAll();
             this.vm.clear();
             delete this.vm;
-            console.log('[INFO] VM stopped for runner:', this.id);
+            logger.log(`[INFO] VM stopped for runner: ${this.id}`);
             } else {
-            console.warn('[WARN] No VM to stop for runner:', this.id);
+            logger.warn(`[WARN] No VM to stop for runner: ${this.id}`);
             }
         } catch (e) {
             delete this.vm;
-            console.warn('[WARN] Error stopping VM, deleted instance for runner:', this.id,);
+            logger.warn(`[WARN] Error stopping VM, deleted instance for runner: ${this.id}`);
         }
     }
     trigger(event, data, callback) {
         if (this.vm) {
             this.vm.runtime.scbackend.eventqueue.push([event, data]);
             this.vm.runtime.startHats(callback);
-            console.log(`[INFO] Triggered event: ${event}`, data);
+            logger.log(`[INFO] Triggered event: ${event}`, data);
         } else {
-            console.error('[ERROR] VM is not initialized');
+            logger.error('[ERROR] VM is not initialized');
         }
     }
 };

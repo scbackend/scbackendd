@@ -1,4 +1,5 @@
-import WebSocket from 'ws';
+import { WebSocketServer } from 'ws';
+import logger from './logger.js';
 
 class Service
 {
@@ -7,6 +8,7 @@ class Service
         this.manager = manager;
         this._handling = false;
         this.clients = new Set();
+        this.verifiedClients = {};
         this.wss = null;
     }
 
@@ -15,7 +17,7 @@ class Service
     }
 
     start() {
-        this.wss = new WebSocket.Server({ port: this.port });
+        this.wss = new WebSocketServer({ port: this.port });
         this.wss.on('connection', (ws) => {
             this.clients.add(ws);
 
@@ -36,19 +38,33 @@ class Service
 
             ws.on('close', () => {
                 this.clients.delete(ws);
+                for (const i of Object.values(this.verifiedClients)) {
+                    i.delete(ws);
+                }
             });
 
             ws.on('error', () => {
                 this.clients.delete(ws);
+                for (const i of Object.values(this.verifiedClients)) {
+                    i.delete(ws);
+                }
             });
         });
     }
 
-    async handleEvent() {
+    async handleEvent(id) {
         if (this._handling) return;
         this._handling = true;
         while (this.manager.eventqueue.length > 0) {
             const [event, data] = this.manager.eventqueue.shift();
+            switch (event) {
+                case 'message':
+                    const dst = data.dst;
+                    const msg = data.message;
+                    break;
+                default:
+                    logger.warn(`[WARN] Unknown event type: ${event}`);
+            }
         }
         this._handling = false;
     }
@@ -58,14 +74,31 @@ class Service
             case 'handshake':
                 this.handleHandshake(ws, data);
                 break;
-            // 可以添加更多类型处理
+            case 'message':
+                logger.log('Received message:', data);
+                break;
             default:
                 ws.send(JSON.stringify({ type: 'error', message: 'Unknown type' }));
         }
     }
 
     handleHandshake(ws, data) {
-        // 这里可以做认证、分配ID等
+        if (!data.dst || typeof data.dst !== 'string') {
+            ws.send(JSON.stringify({ type: 'error', message: 'Missing dst field' }));
+            return;
+        }
+        if(!this.verifiedClients[data.dst]) {
+            if(!this.manager.runners[data.dst]) {
+                ws.send(JSON.stringify({ type: 'error', message: 'Unknown dst' }));
+                return;
+            }
+            this.verifiedClients[data.dst] = new Set();
+        }
+        if(this.verifiedClients[data.dst].has(ws)) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Already verified for this dst' }));
+            return;
+        }
+        this.verifiedClients[data.dst].add(ws);
         ws.send(JSON.stringify({ type: 'handshake', status: 'ok' }));
     }
 }

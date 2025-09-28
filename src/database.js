@@ -3,11 +3,11 @@ import sqlite3 from 'sqlite3';
 
 class Database {
     constructor(config) {
-        this.type = config.get().type;
+        this.type = config.type;
         if (this.type === 'mysql') {
-            this.pool = mysql.createPool(config.get().mysql);
+            this.pool = mysql.createPool(config.mysql);
         } else if (this.type === 'sqlite') {
-            this.sqlite = new sqlite3.Database(config.get().sqlite.filename);
+            this.sqlite = new sqlite3.Database(config.sqlite.filename);
         } else {
             throw new Error('Unsupported database type');
         }

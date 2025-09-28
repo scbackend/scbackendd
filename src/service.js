@@ -1,5 +1,6 @@
 import { WebSocketServer } from 'ws';
 import logger from './logger.js';
+import BiMap from 'bimap';
 
 class Service
 {
@@ -7,8 +8,8 @@ class Service
         this.port = port;
         this.manager = manager;
         this._handling = false;
-        this.clients = new Set();
-        this.verifiedClients = {};
+        this.clients = new Map();
+        this.mappings = new BiMap(); // sessionId <-> ws
         this.wss = null;
     }
 
@@ -19,7 +20,8 @@ class Service
     start() {
         this.wss = new WebSocketServer({ port: this.port });
         this.wss.on('connection', (ws) => {
-            this.clients.add(ws);
+            this.clients.set(ws, { verified: false, sessionId: null });
+            ws.sessionId = null;
 
             ws.on('message', (message) => {
                 let data;
@@ -38,15 +40,17 @@ class Service
 
             ws.on('close', () => {
                 this.clients.delete(ws);
-                for (const i of Object.values(this.verifiedClients)) {
-                    i.delete(ws);
+                const sessionId = ws.sessionId;
+                if (sessionId) {
+                    this.mappings.removeKey(sessionId);
                 }
             });
 
             ws.on('error', () => {
                 this.clients.delete(ws);
-                for (const i of Object.values(this.verifiedClients)) {
-                    i.delete(ws);
+                const sessionId = ws.sessionId;
+                if (sessionId) {
+                    this.mappings.removeKey(sessionId);
                 }
             });
         });
@@ -61,6 +65,10 @@ class Service
                 case 'message':
                     const dst = data.dst;
                     const msg = data.message;
+                    const ws = this.mappings.key(dst) || this.mappings.val(dst);
+                    if (ws && this.clients.has(ws) && this.clients.get(ws).verified) {
+                        ws.send(JSON.stringify({ type: 'message', message: msg }));
+                    }
                     break;
                 default:
                     logger.warn(`[WARN] Unknown event type: ${event}`);
@@ -87,19 +95,23 @@ class Service
             ws.send(JSON.stringify({ type: 'error', message: 'Missing dst field' }));
             return;
         }
-        if(!this.verifiedClients[data.dst]) {
-            if(!this.manager.runners[data.dst]) {
-                ws.send(JSON.stringify({ type: 'error', message: 'Unknown dst' }));
-                return;
-            }
-            this.verifiedClients[data.dst] = new Set();
-        }
-        if(this.verifiedClients[data.dst].has(ws)) {
-            ws.send(JSON.stringify({ type: 'error', message: 'Already verified for this dst' }));
+        if(!this.manager.runners[data.dst]) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Unknown dst' }));
             return;
         }
-        this.verifiedClients[data.dst].add(ws);
-        ws.send(JSON.stringify({ type: 'handshake', status: 'ok' }));
+        // 握手完成后分配唯一sessionId
+        if (!ws.sessionId) {
+            let sessionId;
+            do {
+                sessionId = Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
+            } while (this.mappings.val({verified: true, sessionId}));
+            ws.sessionId = sessionId;
+            this.clients.get(ws).sessionId = sessionId;
+            this.mappings.set(ws, {verified: true, sessionId});//标记为已验证
+            this.manager.runners[data.dst].trigger('handshake', sessionId, 'newconnection');
+        }
+        const sessionId = ws.sessionId;
+        ws.send(JSON.stringify({ type: 'handshake', status: 'ok', sessionId }));
     }
 }
 

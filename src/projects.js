@@ -34,7 +34,7 @@ class Projects {
 
   async getProjectBodyById(id) {
     try {
-      return await fs.promises.readFile(`./projects/${id}.sb3`);
+      return await fs.promises.readFile(`./projects/${id}.json`, 'utf8');
     } catch (error) {
       logger.error(`[ERROR] Failed to read project file: ${error}`);
       throw error;

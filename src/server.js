@@ -6,14 +6,13 @@ import logger from './logger.js';
 import Config from './config.js';
 
 class Server {
-  constructor(port, rundir, projects, manager) {
+  constructor(port, rundir, projects, manager, config) {
     this.port = port;
     this.projects = projects;
     this.manager = manager;
     this.rundir = rundir;
     this.token = null;
-    this.config = this.loadConfig();
-    this.safepath = this.config.safepath || 'dashboard';
+    this.config = config;
 
     this.app = express();
     this.app.use(express.json());
@@ -197,12 +196,6 @@ class Server {
     
   }
 
-  loadConfig() {
-    return new Config( 'config.yml', 'yaml', {
-      username: 'admin',
-      password: 'admin',
-    }).get();
-  }
   init() {
     this.app.on('error', (err) => {
       logger.error(`[ERROR] Server error: ${err.message}`);
@@ -212,7 +205,7 @@ class Server {
     });
   }
   start(port) {
-    this.app.listen((port?port:this.port), () => {
+    this.app.listen((port?this.port=port:this.port), () => {
       logger.log(`[INFO] Server running at http://localhost:${this.port}/`);
     });
   }

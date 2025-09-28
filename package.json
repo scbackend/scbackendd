@@ -23,6 +23,7 @@
   "private": false,
   "description": "",
   "dependencies": {
+    "bimap": "^0.0.15",
     "denque": "^2.1.0",
     "express": "^5.1.0",
     "http": "^0.0.1-security",
@@ -30,7 +31,7 @@
     "mysql2": "^3.14.1",
     "path": "^0.12.7",
     "process": "^0.11.10",
-    "scbackend-vm": "^11.45.16",
+    "scbackend-vm": "^11.45.18",
     "sqlite3": "^5.1.7",
     "url": "^0.11.4",
     "ws": "^8.18.3"
@@ -38,6 +39,7 @@
   "devDependencies": {
     "esbuild": "^0.25.10",
     "javascript-obfuscator": "^4.1.1",
+    "pkg": "^5.8.1",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2"
   }

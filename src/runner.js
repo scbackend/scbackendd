@@ -8,6 +8,8 @@ class Runner {
         this.id = id;
         this.project = project;
         this.vm.setTurboMode(true);
+        this.vm.setCompatibilityMode(true);
+        this.vm.setCompilerOptions({preserveUnusedBlocks: true, enabled: true});
         this.eventqueue = new denque();
         this.exts = [
             'scbackendbasic',
@@ -18,10 +20,6 @@ class Runner {
             this.vm.extensionManager.loadExtensionIdSync(ext);
         }
         this.project.getProjectBodyById(this.id)
-            .then(buffer => {
-                const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-                return arrayBuffer;
-            })
             .then(project => {
                 this.vm.loadProject(project)
                     .then(() => {
@@ -32,6 +30,7 @@ class Runner {
                             if (handleEvent) handleEvent(this.id);
                         }
                         this.vm.start();
+                        this.vm.greenFlag();
                         logger.log(`[INFO] Project loaded and VM started for runner: ${this.id}`);
                         if (callback && typeof callback === 'function') {
                             callback(this.vm);
@@ -48,12 +47,12 @@ class Runner {
     close() {
         try {
             if (this.vm) {
-            this.vm.stopAll();
-            this.vm.clear();
-            delete this.vm;
-            logger.log(`[INFO] VM stopped for runner: ${this.id}`);
+                this.vm.stopAll();
+                this.vm.clear();
+                delete this.vm;
+                logger.log(`[INFO] VM stopped for runner: ${this.id}`);
             } else {
-            logger.warn(`[WARN] No VM to stop for runner: ${this.id}`);
+                logger.warn(`[WARN] No VM to stop for runner: ${this.id}`);
             }
         } catch (e) {
             delete this.vm;

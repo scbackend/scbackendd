@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import logger from './logger.js';
-import Config from './config.js';
+import JSZip from 'jszip';
 
 class Server {
   constructor(port, rundir, projects, manager, config) {
@@ -79,7 +79,7 @@ class Server {
       }
     });
 
-    this.app.use('/project/:id', express.raw({ type: 'application/octet-stream', limit: '50mb' }));
+    this.app.use('/project/:id', express.raw({ type: 'application/octet-stream', limit: '128mb' }));
     this.app.post('/project/:id', async (req, res) => {
       const projectId = req.params.id;
       const projectData = req.body;
@@ -88,12 +88,15 @@ class Server {
           res.status(400).json({ error: 'Project body is required' });
           return;
         }
-        const filePath = path.resolve('.', 'projects', `${projectId}.sb3`);
+        const filePath = path.resolve('.', 'projects', `${projectId}.json`);
         const dirpath = path.dirname(filePath);
         if (!fs.existsSync(dirpath)) {
           fs.mkdirSync(dirpath, { recursive: true });
         }
-        fs.writeFileSync(filePath, projectData, 'binary');
+        const zip = new JSZip();
+        await zip.loadAsync(projectData);
+        const projectJson = await zip.file('project.json').async('string');
+        fs.writeFileSync(filePath, projectJson, 'binary');
         console.log(`[INFO] Project updated: ${projectId}`);
         res.status(200).json({ message: 'Project updated successfully' });
       } catch (error) {

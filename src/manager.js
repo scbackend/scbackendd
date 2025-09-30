@@ -31,9 +31,9 @@ class Manager {
             logger.warn(`[WARN] No runner found for ID: ${id}`);
         }
     }
-    triggerRunnerEvent(id, event, data) {
+    triggerRunnerEvent(id, event, data, callback) {
         if (this.runners[id]) {
-            this.runners[id].trigger(event, data);
+            this.runners[id].trigger(event, data, callback);
             logger.log(`[INFO] Event triggered for ID: ${id}, Event: ${event}`, data);
         } else {
             logger.error(`[ERROR] No runner found for ID: ${id}`);

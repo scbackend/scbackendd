@@ -8,7 +8,7 @@ class Service
         this.port = port;
         this.manager = manager;
         this._handling = false;
-        this.mappings = new BiMap(); // sessionId <-> ws
+        this.mappings = new Map(); // sessionId <-> ws
         this.wss = null;
     }
 
@@ -40,14 +40,14 @@ class Service
             ws.on('close', () => {
                 const sessionId = ws.sessionId;
                 if (sessionId) {
-                    this.mappings.removeKey(sessionId);
+                    this.mappings.delete(sessionId);
                 }
             });
 
             ws.on('error', () => {
                 const sessionId = ws.sessionId;
                 if (sessionId) {
-                    this.mappings.removeKey(sessionId);
+                    this.mappings.delete(sessionId);
                 }
             });
         });
@@ -61,10 +61,12 @@ class Service
             switch (event) {
                 case 'message':
                     const dst = data.dst;
-                    const msg = data.message;
-                    const ws = this.mappings.val(dst);
-                    if (ws && this.clients.get(ws).verified) {
+                    const msg = data.body;
+                    const ws = this.mappings.get(dst);
+                    if (ws) {
                         ws.send(JSON.stringify({ type: 'message', message: msg }));
+                    } else {
+                        logger.warn(`[WARN] No WebSocket found for session ID: ${dst}`);
                     }
                     break;
                 default:
@@ -89,7 +91,7 @@ class Service
                 break;
             case 'message':
                 logger.log(`Received message: ${data.body}`);
-                this.manager.triggerRunnerEvent(ws.dst, 'message', data.body, 'onmessage');
+                this.manager.triggerRunnerEvent(ws.dst, 'message', {data: data.body, srcid: ws.sessionId}, 'scbackendbasic_message');
                 break;
             default:
                 ws.send(JSON.stringify({ type: 'error', message: 'Unknown type' }));
@@ -111,11 +113,10 @@ class Service
             let sessionId;
             do {
                 sessionId = Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
-            } while (this.mappings.val({verified: true, sessionId}));
+            } while (this.mappings.has(sessionId));
             ws.sessionId = sessionId;
-            this.clients.get(ws).sessionId = sessionId;
-            this.mappings.set(ws, {verified: true, sessionId});//标记为已验证
-            this.manager.triggerRunnerEvent(data.dst, 'handshake', sessionId, 'newconnection');
+            this.mappings.set(sessionId, ws);
+            this.manager.triggerRunnerEvent(data.dst, 'handshake', {sessionid: sessionId}, 'scbackendbasic_newconnect');
         }
         const sessionId = ws.sessionId;
         ws.send(JSON.stringify({ type: 'handshake', status: 'ok', sessionId }));

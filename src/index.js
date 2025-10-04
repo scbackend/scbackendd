@@ -9,7 +9,7 @@ import Config from './config.js';
 const main =(rundir) => {
     process.title = 'scbackendd';
     process.on('uncaughtException', (error) => {
-        console.error(`[ERROR] Uncaught Exception: ${error}`);
+        console.error(`[ERROR] Uncaught Exception: ${error.stack}`);
         process.exit(1);
     });
     logger.log('[INFO] Starting the backend server...');

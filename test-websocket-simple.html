@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scbackend WebSocket 测试客户端</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 100%, #764ba2 0%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .config-section, .control-section, .log-section {
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-connect {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-disconnect {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-send {
+            background: #2196F3;
+            color: white;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status.connected {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .status.disconnected {
+            background: #f44336;
+            color: white;
+        }
+
+        #log {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+        }
+
+        .log-time {
+            color: #858585;
+        }
+
+        .log-info {
+            color: #4FC3F7;
+        }
+
+        .log-success {
+            color: #81C784;
+        }
+
+        .log-error {
+            color: #E57373;
+        }
+
+        .log-message {
+            color: #FFD54F;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Scbackend WebSocket 测试客户端</h1>
+
+        <div class="config-section">
+            <h3>连接配置</h3>
+            <div class="form-group">
+                <label for="wsUrl">WebSocket URL:</label>
+                <input type="text" id="wsUrl" value="ws://localhost:3031">
+            </div>
+            <div class="form-group">
+                <label for="runnerId">Runner ID:</label>
+                <input type="text" id="runnerId" value="test-runner" placeholder="输入要连接的 runner ID">
+            </div>
+        </div>
+
+        <div class="control-section">
+            <h3>控制面板 <span id="status" class="status disconnected">未连接</span></h3>
+            <button class="btn-connect" onclick="connect()">连接</button>
+            <button class="btn-disconnect" onclick="disconnect()">断开</button>
+            <br><br>
+            <div class="form-group">
+                <label for="message">发送消息:</label>
+                <input type="text" id="message" placeholder="输入要发送的消息">
+            </div>
+            <button class="btn-send" onclick="sendMessage()">发送</button>
+            <button class="btn-send" onclick="sendTestMessages()">发送测试消息</button>
+        </div>
+
+        <div class="log-section">
+            <h3>日志 <button style="float:right; padding:5px 10px;" onclick="clearLog()">清除</button></h3>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let sessionId = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function updateStatus(connected) {
+            const statusEl = document.getElementById('status');
+            if (connected) {
+                statusEl.className = 'status connected';
+                statusEl.textContent = '已连接';
+            } else {
+                statusEl.className = 'status disconnected';
+                statusEl.textContent = '未连接';
+            }
+        }
+
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+            const runnerId = document.getElementById('runnerId').value;
+
+            if (!runnerId) {
+                alert('请输入 Runner ID');
+                return;
+            }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('已经连接，请先断开', 'error');
+                return;
+            }
+
+            log(`正在连接到 ${url}...`, 'info');
+            ws = new WebSocket(url);
+
+            ws.onopen = () => {
+                log('WebSocket 连接建立成功', 'success');
+                updateStatus(true);
+
+                // 自动发送握手
+                log(`发送握手请求到 runner: ${runnerId}`, 'info');
+                ws.send(JSON.stringify({
+                    type: 'handshake',
+                    dst: runnerId
+                }));
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`收到消息: ${JSON.stringify(data)}`, 'message');
+
+                    switch(data.type) {
+                        case 'handshake':
+                            if (data.status === 'ok') {
+                                sessionId = data.sessionId;
+                                log(`握手成功! Session ID: ${sessionId}`, 'success');
+                            }
+                            break;
+                        case 'message':
+                            log(`来自 Runner 的消息: ${data.message}`, 'message');
+                            break;
+                        case 'error':
+                            log(`服务器错误: ${data.message}`, 'error');
+                            break;
+                    }
+                } catch (e) {
+                    log(`解析消息失败: ${e.message}`, 'error');
+                }
+            };
+
+            ws.onerror = (error) => {
+                log(`WebSocket 错误: ${error.message || '未知错误'}`, 'error');
+            };
+
+            ws.onclose = () => {
+                log('WebSocket 连接已关闭', 'info');
+                updateStatus(false);
+                sessionId = null;
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                log('主动断开连接', 'info');
+            }
+        }
+
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('未连接到服务器');
+                return;
+            }
+
+            if (!sessionId) {
+                alert('尚未完成握手');
+                return;
+            }
+
+            const message = document.getElementById('message').value;
+            if (!message) {
+                alert('请输入消息内容');
+                return;
+            }
+
+            const data = {
+                type: 'message',
+                body: message
+            };
+
+            ws.send(JSON.stringify(data));
+            log(`发送消息: ${message}`, 'info');
+            document.getElementById('message').value = '';
+        }
+
+        function sendTestMessages() {
+            const messages = [
+                'Hello from test client!',
+                'This is a test message',
+                'Testing WebSocket communication',
+                '你好，这是一条测试消息',
+                'Final test message'
+            ];
+
+            messages.forEach((msg, index) => {
+                setTimeout(() => {
+                    document.getElementById('message').value = msg;
+                    sendMessage();
+                }, index * 1000);
+            });
+        }
+
+        // 回车发送
+        document.getElementById('message').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        log('WebSocket 测试客户端已就绪', 'success');
+    </script>
+</body>
+</html>

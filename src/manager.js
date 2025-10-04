@@ -31,10 +31,10 @@ class Manager {
             logger.warn(`[WARN] No runner found for ID: ${id}`);
         }
     }
-    triggerRunnerEvent(id, event, data, callback) {
+    triggerRunnerEvent(id, event, data, callback, field) {
         if (this.runners[id]) {
-            this.runners[id].trigger(event, data, callback);
-            logger.log(`[INFO] Event triggered for ID: ${id}, Event: ${event}`, data);
+            this.runners[id].trigger(event, data, callback, field);
+            logger.log(`[INFO] Event triggered for ID: ${id}, Event: ${event}`);
         } else {
             logger.error(`[ERROR] No runner found for ID: ${id}`);
         }
@@ -46,7 +46,7 @@ class Manager {
                     callback(...data);
                 }
             }
-            logger.log(`[INFO] Local event triggered: ${event}`, data);
+            logger.log(`[INFO] Local event triggered: ${event}`);
         } else {
             logger.warn(`[WARN] No listeners for local event: ${event}`);
         }
@@ -69,14 +69,17 @@ class Manager {
         runner._handling = true;
         while (runner.eventqueue.length > 0) {
             const [event, data] = runner.eventqueue.shift();
-            logger.log(`[INFO] Handling event for ID: ${id}, Event: ${event}`, data);
+            logger.log(`[INFO] Handling event for ID: ${id}, Event: ${event}`);
             switch (event) {
                 case 'message':
-                    logger.log(`[INFO] Message for ID: ${id}`, data);
+                    logger.log(`[INFO] Message from runner ${id} to session ${data.dst}:`);
                     this.eventqueue.push([event, data]);
                     this.triggerLocalEvent('message',[id]);
                     break;
-                // 可以添加更多事件处理
+                case 'log':
+                    const logmsg = data.body;
+                    logger.log(`[RUNNER LOG] ${id}: ${logmsg}`);
+                    break;
                 default:
                     logger.warn(`[WARN] Unknown event type: ${event} for ID: ${id}`);
             }

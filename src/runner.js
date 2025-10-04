@@ -9,7 +9,7 @@ class Runner {
         this.project = project;
         this.vm.setTurboMode(true);
         this.vm.setCompatibilityMode(true);
-        this.vm.setCompilerOptions({preserveUnusedBlocks: true, enabled: true});
+        this.vm.setCompilerOptions({enabled: true,warpTimer: false,hotloop: true,register: true});
         this.eventqueue = new denque();
         this.exts = [
             'scbackendbasic',
@@ -59,11 +59,10 @@ class Runner {
             logger.warn(`[WARN] Error stopping VM, deleted instance for runner: ${this.id}`);
         }
     }
-    trigger(event, data, callback) {
+    trigger(event, data, callback, field) {
         if (this.vm) {
-            this.vm.runtime.scbackend.eventqueue.push([event, data]);
-            this.vm.runtime.startHats(callback);
-            logger.log(`[INFO] Triggered event: ${event}`, data);
+            this.vm.runtime.startHatsWithParams(callback, data, field);
+            logger.log(`[INFO] Triggered event: ${event}: ${data} for runner: ${this.id}`);
         } else {
             logger.error('[ERROR] VM is not initialized');
         }

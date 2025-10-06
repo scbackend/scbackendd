@@ -1,6 +1,5 @@
 import { WebSocketServer } from 'ws';
 import logger from './logger.js';
-import BiMap from 'bimap';
 
 class Service
 {
@@ -38,6 +37,10 @@ class Service
             });
 
             ws.on('close', () => {
+                const dst = ws.dst;
+                if (dst && this.manager.runners[dst]) {
+                    this.manager.triggerRunnerEvent(dst, 'disconnect', { sessionid: ws.sessionId }, 'scbackendbasic_disconnect');
+                }
                 const sessionId = ws.sessionId;
                 if (sessionId) {
                     this.mappings.delete(sessionId);
@@ -45,6 +48,10 @@ class Service
             });
 
             ws.on('error', () => {
+                const dst = ws.dst;
+                if (dst && this.manager.runners[dst]) {
+                    this.manager.triggerRunnerEvent(dst, 'disconnect', { sessionid: ws.sessionId }, 'scbackendbasic_disconnect');
+                }
                 const sessionId = ws.sessionId;
                 if (sessionId) {
                     this.mappings.delete(sessionId);

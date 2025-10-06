@@ -101,11 +101,13 @@ class Service
     handleHandshake(ws, data) {
         if (!data.dst || typeof data.dst !== 'string') {
             ws.send(JSON.stringify({ type: 'error', message: 'Missing dst field' }));
+            ws.close();
             return;
         }
         ws.dst = data.dst;
         if(!this.manager.runners[data.dst]) {
             ws.send(JSON.stringify({ type: 'error', message: 'Unknown dst' }));
+            ws.close();
             return;
         }
         // 握手完成后分配唯一sessionId

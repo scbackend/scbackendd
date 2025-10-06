@@ -10,17 +10,18 @@ class Projects {
 
   async connect() {
     this.database = new Database(this.dbConfig);
+    await this.ensureTableExists();
   }
 
   async ensureTableExists() {
-    const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS projects (
+    await this.database.ensureTableExists(
+      'projects',
+      `CREATE TABLE projects (
         name VARCHAR(64) PRIMARY KEY UNIQUE,
         body LONGTEXT,
         meta TEXT
-      )
-    `;
-    await this.database.query(createTableSQL);
+      )`
+    );
   }
 
   async getAllProjects() {

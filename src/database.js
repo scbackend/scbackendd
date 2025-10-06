@@ -2,6 +2,27 @@ import mysql from 'mysql2/promise';
 import sqlite3 from 'sqlite3';
 
 class Database {
+    async ensureTableExists(tableName, createTableSQL) {
+        let tableExists = false;
+        if (this.type === 'sqlite') {
+            const rows = await this.query(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                [tableName]
+            );
+            tableExists = rows.length > 0;
+        } else if (this.type === 'mysql') {
+            const rows = await this.query(
+                `SHOW TABLES LIKE ?`,
+                [tableName]
+            );
+            tableExists = rows.length > 0;
+        } else {
+            throw new Error('Unknown database type: ' + this.type);
+        }
+        if (!tableExists) {
+            await this.query(createTableSQL);
+        }
+    }
     constructor(config) {
         this.type = config.type;
         if (this.type === 'mysql') {

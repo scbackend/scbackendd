@@ -80,6 +80,11 @@ class Manager {
                     const logmsg = data.body;
                     logger.log(`[RUNNER LOG] ${id}: ${logmsg}`);
                     break;
+                case 'kick':
+                    const dst = data.dst;
+                    const reason = data.reason || 'Kicked by server';
+                    this.eventqueue.push([event, {dst, reason}]);
+                    this.triggerLocalEvent('message',[id]);
                 default:
                     logger.warn(`[WARN] Unknown event type: ${event} for ID: ${id}`);
             }

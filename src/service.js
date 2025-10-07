@@ -76,6 +76,18 @@ class Service
                         logger.warn(`[WARN] No WebSocket found for session ID: ${dst}`);
                     }
                     break;
+                case 'kick':
+                    const kickDst = data.dst;
+                    const reason = data.reason || 'Kicked by server';
+                    const kickWs = this.mappings.get(kickDst);
+                    if (kickWs) {
+                        kickWs.send(JSON.stringify({ type: 'kick', reason }));
+                        kickWs.close();
+                        this.mappings.delete(kickDst);
+                        logger.log(`[INFO] Kicked session ${kickDst}: ${reason}`);
+                    } else {
+                        logger.warn(`[WARN] No WebSocket connection found for session: ${kickDst}`);
+                    }
                 default:
                     logger.warn(`[WARN] Unknown event type: ${event}`);
             }

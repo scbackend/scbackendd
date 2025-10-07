@@ -9,6 +9,7 @@ COPY . /src
 RUN rm /src/Dockerfile
 
 # 进入 /src 目录并执行 npm link
+RUN cd /src && npm install --production
 RUN cd /src && npm link
 
 # 启动容器时执行 scbackendd

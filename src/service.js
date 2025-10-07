@@ -112,6 +112,9 @@ class Service
                 logger.log(`Received message: ${data.body}`);
                 this.manager.triggerRunnerEvent(ws.dst, 'message', {data: data.body, srcid: ws.sessionId}, 'scbackendbasic_message');
                 break;
+            case 'ping':
+                ws.send(JSON.stringify({ type: 'pong' }));
+                break;
             default:
                 ws.send(JSON.stringify({ type: 'error', message: 'Unknown type' }));
         }

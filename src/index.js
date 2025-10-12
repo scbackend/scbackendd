@@ -5,6 +5,7 @@ import Projects from './projects.js';
 import Service from './service.js';
 import logger from './logger.js';
 import Config from './config.js';
+import Plugin from './plugin.js';
 
 const main =(rundir) => {
     process.title = 'scbackendd';
@@ -22,14 +23,27 @@ const main =(rundir) => {
         database: {
             type: "sqlite",
             sqlite: {
-            filename: "scbackend.db"
+                filename: "scbackend.db"
             },
             mysql: {
-            host: "localhost",
-            port: 3306,
-            user: "root",
-            password: "",
-            database: "scbackend"
+                host: "localhost",
+                port: 3306,
+                user: "root",
+                password: "",
+                database: "scbackend"
+            }
+        },
+        plugins: {
+            type: "sqlite",
+            sqlite: {
+                filename: "plugins.db"
+            },
+            mysql: {
+                host: "localhost",
+                port: 3306,
+                user: "root",
+                password: "",
+                database: "plugins"
             }
         }
     };
@@ -46,10 +60,11 @@ const main =(rundir) => {
             process.exit(1);
         });
 
-    const DASHPORT = process.env.DASHPORT || 3030;
-    const SERVPORT = process.env.SERVPORT || 3031;
-    const server = new Server(DASHPORT, rundir, projects, manager, config.get());
+    const DASHPORT = config.get('dashport') || 3030;
+    const SERVPORT = config.get('serviceport') || 3031;
     const service = new Service(SERVPORT, manager);
+    const pluginManager = new Plugin(manager, service, config.get('plugins'));
+    const server = new Server(DASHPORT, rundir, projects, manager, config.get(), pluginManager);
 
     server.init();
     server.start();

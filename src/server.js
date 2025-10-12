@@ -6,13 +6,14 @@ import logger from './logger.js';
 import JSZip from 'jszip';
 
 class Server {
-  constructor(port, rundir, projects, manager, config) {
+  constructor(port, rundir, projects, manager, config, plugin) {
     this.port = port;
     this.projects = projects;
     this.manager = manager;
     this.rundir = rundir;
     this.token = null;
     this.config = config;
+    this.plugin = plugin;
 
     this.app = express();
     this.app.use(express.json());
@@ -48,6 +49,7 @@ class Server {
       res.sendFile(path.resolve(this.rundir, 'public', 'favicon.ico'));
     });
     this.app.use(new RegExp(`^\/static\/*$`), express.static(path.resolve(this.rundir, 'public')));
+    this.app.get('/readme', _ => fs.readFileSync(path.resolve(this.rundir, 'README.md')));
 
     this.app.use((req, res, next) => {
       if (req.path === '/login') return next();
@@ -196,7 +198,55 @@ class Server {
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
+
+    this.app.post('/plugin/upload/:id', express.raw({ type: 'application/javascript', limit: '10mb' }), async (req, res) => {
+      const pluginId = req.params.id;
+      const pluginData = req.body;
+      try {
+        if (!pluginData) {
+          res.status(400).json({ error: 'Plugin body is required' });
+          return;
+        }
+        const filePath = path.resolve('.', 'plugins', `${pluginId}.js`);
+        const dirpath = path.dirname(filePath);
+        if (!fs.existsSync(dirpath)) {
+          fs.mkdirSync(dirpath, { recursive: true });
+        }
+        fs.writeFileSync(filePath, pluginData, 'utf8');
+        console.log(`[INFO] Plugin uploaded: ${pluginId}`);
+        res.status(200).json({ message: 'Plugin uploaded successfully' });
+      } catch (error) {
+        console.error(`[ERROR] Error uploading plugin: ${error.message}`);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.get('/plugins', (req, res) => {
+      try {
+        const plugins = this.plugin.listPlugins();
+        res.status(200).json(plugins);
+      } catch (error) {
+        logger.error(`[ERROR] Error fetching plugins: ${error.message}`);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
     
+    this.app.get('/plugin/delete/:id', async (req, res) => {
+      const pluginId = req.params.id;
+      try {
+        const pluginPath = path.resolve('.', 'plugins', `${pluginId}.js`);
+        if (fs.existsSync(pluginPath)) {
+          fs.unlinkSync(pluginPath);
+          res.status(200).json({ message: 'Plugin file deleted' });
+        } else {
+          res.status(404).json({ error: 'Plugin file not found' });
+        }
+      } catch (error) {
+        logger.error(`[ERROR] Error deleting plugin file: ${error.message}`);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
   }
 
   init() {

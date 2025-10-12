@@ -70,6 +70,7 @@ class Manager {
         while (runner.eventqueue.length > 0) {
             const [event, data] = runner.eventqueue.shift();
             logger.log(`[INFO] Handling event for ID: ${id}, Event: ${event}`);
+            this.triggerLocalEvent('event',[id, event, data]);
             switch (event) {
                 case 'message':
                     logger.log(`[INFO] Message from runner ${id} to session ${data.dst}:`);

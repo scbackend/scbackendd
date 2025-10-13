@@ -3,7 +3,7 @@ import denque from 'denque';
 import logger from './logger.js';
 
 class Runner {
-    constructor(id,project) {
+    constructor(id,project,regexts) {
         this.vm = new VirtualMachine();
         this.id = id;
         this.project = project;
@@ -14,10 +14,15 @@ class Runner {
         this.exts = [
             'scbackendbasic',
         ];
+        for (const ext of regexts) {
+            const id = ext.getInfo().id;
+            if (!this.exts.includes(id)) this.exts.push(id);
+            this.vm.extensionManager.addBuiltinExtension(id, ext);
+        }
     }
     init(callback, handleEvent) {
         for (const ext of this.exts) {
-            this.vm.extensionManager.loadExtensionIdSync(ext);
+            if (typeof ext == 'string') this.vm.extensionManager.loadExtensionIdSync(ext);
         }
         this.project.getProjectBodyById(this.id)
             .then(project => {

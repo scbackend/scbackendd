@@ -9,10 +9,16 @@ class Manager {
         this.eventqueue = new denque();
         this._handling = false;
         this.eventbinding = {};
+        this.registeredExts = [];
+    }
+    registerExtension(ext) {
+        if (!this.registeredExts.includes(ext)) {
+            this.registeredExts.push(ext);
+        }
     }
     addRunner(id) {
         if (!this.runners[id]) {
-            this.runners[id] = new Runner(id, this.project);
+            this.runners[id] = new Runner(id, this.project, this.registeredExts);
             this.runners[id]._handling = false;
             logger.log(`[INFO] Runner added for ID: ${id}`);
             this.runners[id].init((vm) => {

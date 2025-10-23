@@ -72,8 +72,6 @@ class Service
                     const ws = this.mappings.get(dst);
                     if (ws) {
                         ws.send(JSON.stringify({ type: 'message', message: msg }));
-                    } else {
-                        logger.warn(`[WARN] No WebSocket found for session ID: ${dst}`);
                     }
                     break;
                 case 'kick':
@@ -85,8 +83,6 @@ class Service
                         kickWs.close();
                         this.mappings.delete(kickDst);
                         logger.log(`[INFO] Kicked session ${kickDst}: ${reason}`);
-                    } else {
-                        logger.warn(`[WARN] No WebSocket connection found for session: ${kickDst}`);
                     }
                 default:
                     logger.warn(`[WARN] Unknown event type: ${event}`);

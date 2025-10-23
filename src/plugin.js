@@ -13,6 +13,7 @@ class Plugin {
             files.forEach(file => {
                 // 转为 file:// 绝对路径，兼容 ESModule 规范
                 const fileUrl = pathToFileURL(file).href;
+                if (!fileUrl.endsWith('.js') && !fileUrl.endsWith('.mjs')) return;
                 import(fileUrl).then(module => {
                     const plugin = module;
                     this.addPlugin(file, plugin);
@@ -30,7 +31,7 @@ class Plugin {
             try {
                 const config = new Config(`./plugins/${plugin.name || 'unknown'}.yml`, 'yaml', plugin.defaultConfig || {});
                 this.plugins.set(id, plugin);
-                plugin.init(config, {
+                plugin.init(config.get(), {
                     onRunerEvent: this.manager.addEventListener.bind(this.manager),
                     triggerRunnerEvent: this.manager.triggerRunnerEvent.bind(this.manager),
                     registerExtension: this.manager.registerExtension.bind(this.manager),

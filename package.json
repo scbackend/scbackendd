@@ -24,6 +24,7 @@
   "description": "",
   "dependencies": {
     "better-sqlite3": "^7.6.2",
+    "colyseus.js": "^0.16.21",
     "denque": "^2.1.0",
     "express": "^5.1.0",
     "http": "^0.0.1-security",

@@ -48,7 +48,7 @@ class Server {
     this.app.get('/favicon.ico', (req, res) => {
       res.sendFile(path.resolve(this.rundir, 'public', 'favicon.ico'));
     });
-    this.app.use(new RegExp(`^\/static\/*$`), express.static(path.resolve(this.rundir, 'public')));
+    this.app.use(new RegExp(`^\\/static\\/*$`), express.static(path.resolve(this.rundir, 'public')));
     this.app.get('/readme', _ => fs.readFileSync(path.resolve(this.rundir, 'README.md')));
 
     this.app.use((req, res, next) => {
@@ -243,6 +243,29 @@ class Server {
         }
       } catch (error) {
         logger.error(`[ERROR] Error deleting plugin file: ${error.message}`);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.get('/runner/status/:runnerId', (req, res) => {
+      const runnerId = req.params.runnerId;
+      logger.log(`[INFO] Getting status for runner: ${runnerId}`);
+      try {
+        const status = this.manager.getRunnerStatus(runnerId);
+        res.status(200).json(status);
+      } catch (error) {
+        logger.error(`[ERROR] Error getting runner status: ${error.message}`);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.get('/runners/status', (req, res) => {
+      logger.log(`[INFO] Getting status for all runners`);
+      try {
+        const statuses = this.manager.getAllRunnersStatus();
+        res.status(200).json(statuses);
+      } catch (error) {
+        logger.error(`[ERROR] Error getting all runners status: ${error.message}`);
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });

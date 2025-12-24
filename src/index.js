@@ -17,7 +17,7 @@ const main =(rundir) => {
     const configPath = './config.yml';
     const template = {
         username: "scbackend",
-        password: "scbackend/******",
+        password: process.env.SCBACKEND_PASSWORD || "scbackend/******",
         dashport: 3030,
         serviceport: 3031,
         database: {
@@ -29,7 +29,7 @@ const main =(rundir) => {
                 host: "localhost",
                 port: 3306,
                 user: "root",
-                password: "",
+                password: process.env.SCBACKEND_DB_PASSWORD || "",
                 database: "scbackend"
             }
         },

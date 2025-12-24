@@ -65,6 +65,32 @@ class Manager {
         logger.log(`[INFO] Event listener added for event: ${event}`);
     }
 
+    getRunnerStatus(id) {
+        if (this.runners[id]) {
+            return {
+                id: id,
+                status: this.runners[id].status || 'unknown',
+                lastError: this.runners[id].lastError || null,
+                hasVm: !!this.runners[id].vm
+            };
+        } else {
+            return {
+                id: id,
+                status: 'not_found',
+                lastError: 'Runner not found',
+                hasVm: false
+            };
+        }
+    }
+
+    getAllRunnersStatus() {
+        const statuses = {};
+        for (const id in this.runners) {
+            statuses[id] = this.getRunnerStatus(id);
+        }
+        return statuses;
+    }
+
     async handleEvent(id) {
         const runner = this.runners[id];
         if (!runner) {

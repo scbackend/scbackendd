@@ -1,15 +1,17 @@
 {
   "name": "scbackendd",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "main": "./src/index.js",
   "scripts": {
     "start": "node ./src/index.js",
     "dev": "nodemon ./src/index.js",
     "build": "tsup && pkg dist/scbackendd.cjs --out-path ./dist/bin --targets node18-linux-x64,node18-win-x64 --output-name scbackendd",
+    "logs": "node ./src/log-query.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "scbackendd": "./bin/scbackendd.js"
+    "scbackendd": "./bin/scbackendd.js",
+    "scbackendd-logs": "./src/log-query.js"
   },
   "author": "XQYWorld",
   "license": "MPL",
@@ -35,7 +37,8 @@
     "process": "^0.11.10",
     "scbackend-vm": "^11.45.29",
     "url": "^0.11.4",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "esbuild": "^0.25.10",

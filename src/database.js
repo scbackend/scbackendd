@@ -7,6 +7,7 @@ class Database {
         this.type = config.type;
         if (this.type === 'mysql') {
             this.pool = mysql.createPool(config.mysql);
+            this.canMultiExec = config.multipleStatements;
         } else if (this.type === 'sqlite') {
             this.sqlite = new DatabaseSqlite(config.sqlite.filename);
         } else {
@@ -31,13 +32,42 @@ class Database {
     }
 
     async query(sql, params = []) {
+        // -------------------------
+        // MySQL 分支
+        // -------------------------
         if (this.type === 'mysql') {
-            const [rows] = await this.pool.execute(sql, params);
-            return rows;
-        } else if (this.type === 'sqlite') {
-            // better-sqlite3 同步 API
+            const cleaned = sql.trim().replace(/;$/, '');
+            const hasMultipleStatements = cleaned.includes(';');
+
+            if (hasMultipleStatements) {
+                // MySQL 多语句执行
+                // execute() 不支持多语句，必须用 query()
+                const [rows] = await this.pool.query(sql, params);
+                return rows;
+            } else {
+                // 单语句 → execute()
+                const [rows] = await this.pool.execute(sql, params);
+                return rows;
+            }
+        }
+
+        // -------------------------
+        // SQLite 分支
+        // -------------------------
+        if (this.type === 'sqlite') {
+            const cleaned = sql.trim().replace(/;$/, '');
+            const hasMultipleStatements = cleaned.includes(';');
+
+            if (hasMultipleStatements) {
+                if (params.length > 0) {
+                    throw new Error("SQLite exec() 不支持参数绑定，请拆分 SQL 或改为单语句 prepare()");
+                }
+                this.sqlite.exec(sql);
+                return { changes: 0 };
+            }
+
             const stmt = this.sqlite.prepare(sql);
-            // 判断是查询还是执行
+
             if (/^\s*select/i.test(sql)) {
                 return stmt.all(...params);
             } else {

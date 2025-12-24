@@ -29,7 +29,8 @@ class Plugin {
     addPlugin(id, plugin) {
         if (typeof plugin.init === 'function') {
             try {
-                const config = new Config(`./plugins/${plugin.name || 'unknown'}.yml`, 'yaml', plugin.defaultConfig || {});
+                if (!plugin.name) throw new Error('Plugin must have a name property');
+                const config = new Config(`./plugins/${plugin.name}.yml`, 'yaml', plugin.defaultConfig || {});
                 this.plugins.set(id, plugin);
                 plugin.init(config.get(), {
                     onRunerEvent: this.manager.addEventListener.bind(this.manager),

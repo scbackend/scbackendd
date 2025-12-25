@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import path from 'path';
 
 // 日志级别定义
 const LOG_LEVELS = {
@@ -29,12 +30,15 @@ class Logger {
             logToFile: config.logToFile || true,                 // 是否输出到文件
             logToDatabase: config.logToDatabase || true,         // 是否输出到数据库
             maxFileSize: config.maxFileSize || 10 * 1024 * 1024, // 10MB
-            maxFiles: config.maxFiles || 5                       // 保留5个日志文件
+            maxFiles: config.maxFiles || 5,                      // 保留5个日志文件
+            logDir: config.logDir || 'logs'                      // 日志目录
         };
 
         this.db = null;
         this.dbMigrations = null;
         this.initialized = false;
+        this.queue = []; // 日志队列，用于异步处理
+        this.processing = false;
     }
 
     // 设置数据库连接
@@ -66,17 +70,48 @@ class Logger {
             console.log(`${color}[${levelName}][${timestamp}]${sourceStr} ${message}\x1b[0m`);
         }
 
-        // 文件输出（根据级别）
+        // 异步处理文件输出
         if (this.config.logToFile && levelNum >= this.config.fileLevel) {
-            await this.writeToFile(logEntry);
+            this.queueLogEntry(logEntry, 'file');
         }
 
-        // 数据库输出（根据级别）
+        // 异步处理数据库输出
         if (this.config.logToDatabase && this.initialized && levelNum >= this.config.dbLevel) {
-            await this.writeToDatabase(logEntry);
+            this.queueLogEntry(logEntry, 'database');
         }
 
         return logEntry;
+    }
+
+    // 将日志条目加入队列
+    queueLogEntry(logEntry, type) {
+        this.queue.push({ logEntry, type });
+        if (!this.processing) {
+            this.processQueue();
+        }
+    }
+
+    // 处理日志队列
+    async processQueue() {
+        if (this.processing || this.queue.length === 0) return;
+        
+        this.processing = true;
+        
+        while (this.queue.length > 0) {
+            const item = this.queue.shift();
+            try {
+                if (item.type === 'file') {
+                    await this.writeToFile(item.logEntry);
+                } else if (item.type === 'database') {
+                    await this.writeToDatabase(item.logEntry);
+                }
+            } catch (error) {
+                // 静默处理日志写入错误，避免影响主程序
+                console.error(`[ERROR] Failed to write log (${item.type}): ${error.message}`);
+            }
+        }
+        
+        this.processing = false;
     }
 
     // 获取日志级别颜色
@@ -94,17 +129,19 @@ class Logger {
     // 写入文件
     async writeToFile(logEntry) {
         try {
-            await fs.mkdir('logs', { recursive: true });
+            const logDir = path.resolve(this.config.logDir);
+            await fs.mkdir(logDir, { recursive: true });
             
             const logLine = `[${logEntry.level}][${logEntry.timestamp}]${logEntry.source ? `[${logEntry.source}]` : ''} ${logEntry.message}\n`;
+            const filePath = path.join(logDir, 'server.log');
             
             // 检查文件大小并轮转
-            await this.rotateLogFile('logs/server.log');
+            await this.rotateLogFile(filePath);
             
-            await fs.appendFile('logs/server.log', logLine);
+            await fs.appendFile(filePath, logLine);
         } catch (error) {
             // 文件写入失败时静默处理
-            console.error(`[ERROR] Failed to write log to file: ${error.message}`);
+            throw error; // 让上层处理
         }
     }
 
@@ -132,6 +169,7 @@ class Logger {
             }
         } catch (error) {
             // 轮转失败时静默处理
+            throw error;
         }
     }
 
@@ -154,7 +192,7 @@ class Logger {
             ]);
         } catch (error) {
             // 数据库写入失败时静默处理
-            console.error(`[ERROR] Failed to write log to database: ${error.message}`);
+            throw error;
         }
     }
 
@@ -184,6 +222,7 @@ class Logger {
             ]);
         } catch (error) {
             // 静默处理数据库错误
+            console.error(`[ERROR] Failed to log runner network IO: ${error.message}`);
         }
     }
 
@@ -227,7 +266,18 @@ class Logger {
     // 清理旧日志
     async cleanupOldLogs(daysToKeep = 30) {
         if (this.dbMigrations) {
-            await this.dbMigrations.cleanupOldLogs(daysToKeep);
+            try {
+                await this.dbMigrations.cleanupOldLogs(daysToKeep);
+            } catch (error) {
+                console.error(`[ERROR] Failed to cleanup old logs: ${error.message}`);
+            }
+        }
+    }
+
+    // 刷新日志队列（用于优雅关闭）
+    async flush() {
+        while (this.queue.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 100));
         }
     }
 }

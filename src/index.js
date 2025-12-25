@@ -9,60 +9,65 @@ import Plugin from './plugin.js';
 import Database from './database.js';
 import DatabaseMigrations from './database-migrations.js';
 
+// 生成安全的默认密码
+const generateDefaultPassword = () => {
+    return crypto.randomBytes(16).toString('hex');
+};
+
 const main = (rundir) => {
     process.title = 'scbackendd';
     
     // 全局异常处理
     process.on('uncaughtException', (error) => {
-        logger.fatal(`Uncaught Exception: ${error.stack}`);
+        logger.fatal(`Uncaught Exception: ${error.stack}`, 'System');
         process.exit(1);
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-        logger.error(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+        logger.error(`Unhandled Rejection at: ${promise}, reason: ${reason}`, 'System');
     });
 
     // 加载配置
     const configPath = './config.yml';
     const template = {
-        username: "scbackend",
-        password: process.env.SCBACKEND_PASSWORD || "scbackend/******",
-        dashport: 3030,
-        serviceport: 3031,
+        username: process.env.SCBACKEND_USERNAME || "scbackend",
+        password: process.env.SCBACKEND_PASSWORD || generateDefaultPassword(),
+        dashport: parseInt(process.env.SCBACKEND_DASH_PORT) || 3030,
+        serviceport: parseInt(process.env.SCBACKEND_SERVICE_PORT) || 3031,
         logging: {
-            consoleLevel: "info",      // 控制台输出级别: debug, info, warn, error, fatal
-            fileLevel: "warn",         // 文件输出级别
-            dbLevel: "info",           // 数据库输出级别
-            silentMode: false,         // 静默模式
-            logToConsole: true,        // 是否输出到控制台
-            logToFile: true,           // 是否输出到文件
-            logToDatabase: true,       // 是否输出到数据库
-            runnerNetworkIO: true      // 是否记录Runner网络IO日志
+            consoleLevel: process.env.SCBACKEND_LOG_CONSOLE_LEVEL || "info",      // 控制台输出级别: debug, info, warn, error, fatal
+            fileLevel: process.env.SCBACKEND_LOG_FILE_LEVEL || "warn",         // 文件输出级别
+            dbLevel: process.env.SCBACKEND_LOG_DB_LEVEL || "info",           // 数据库输出级别
+            silentMode: process.env.SCBACKEND_SILENT_MODE === 'false',         // 静默模式
+            logToConsole: process.env.SCBACKEND_LOG_TO_CONSOLE !== 'false',        // 是否输出到控制台
+            logToFile: process.env.SCBACKEND_LOG_TO_FILE !== 'false',           // 是否输出到文件
+            logToDatabase: process.env.SCBACKEND_LOG_TO_DB !== 'false',       // 是否输出到数据库
+            runnerNetworkIO: process.env.SCBACKEND_LOG_RUNNER_NETWORK_IO === 'true'      // 是否记录Runner网络IO日志
         },
         database: {
-            type: "sqlite",
+            type: process.env.SCBACKEND_DB_TYPE || "sqlite",
             sqlite: {
-                filename: "scbackend.db"
+                filename: process.env.SCBACKEND_SQLITE_FILENAME || "scbackend.db"
             },
             mysql: {
-                host: "localhost",
-                port: 3306,
-                user: "root",
-                password: process.env.SCBACKEND_DB_PASSWORD || "",
-                database: "scbackend"
+                host: process.env.SCBACKEND_MYSQL_HOST || "localhost",
+                port: parseInt(process.env.SCBACKEND_MYSQL_PORT) || 3306,
+                user: process.env.SCBACKEND_MYSQL_USER || "root",
+                password: process.env.SCBACKEND_MYSQL_PASSWORD || "",
+                database: process.env.SCBACKEND_MYSQL_DATABASE || "scbackend"
             }
         },
         plugins: {
-            type: "sqlite",
+            type: process.env.SCBACKEND_PLUGINS_DB_TYPE || "sqlite",
             sqlite: {
-                filename: "plugins.db"
+                filename: process.env.SCBACKEND_PLUGINS_SQLITE_FILENAME || "plugins.db"
             },
             mysql: {
-                host: "localhost",
-                port: 3306,
-                user: "root",
-                password: "",
-                database: "plugins"
+                host: process.env.SCBACKEND_PLUGINS_MYSQL_HOST || "localhost",
+                port: parseInt(process.env.SCBACKEND_PLUGINS_MYSQL_PORT) || 3306,
+                user: process.env.SCBACKEND_PLUGINS_MYSQL_USER || "root",
+                password: process.env.SCBACKEND_PLUGINS_MYSQL_PASSWORD || "",
+                database: process.env.SCBACKEND_PLUGINS_MYSQL_DATABASE || "plugins"
             }
         }
     };
@@ -125,7 +130,7 @@ const main = (rundir) => {
             
         })
         .catch(error => {
-            logger.error(`Failed to connect to the database: ${error}`, 'System');
+            logger.error(`Failed to connect to the database: ${error.message}`, 'System');
             process.exit(1);
         });
 
@@ -139,14 +144,19 @@ const main = (rundir) => {
     const server = new Server(DASHPORT, rundir, projects, manager, config.get(), pluginManager);
 
     // 启动服务
-    server.init();
-    server.start();
-    service.init();
-    service.start();
+    try {
+        server.init();
+        server.start();
+        service.init();
+        service.start();
+    } catch (error) {
+        logger.error(`Failed to start services: ${error.message}`, 'System');
+        process.exit(1);
+    }
 
     // 定期清理旧日志（每天一次）
     const cleanupInterval = 24 * 60 * 60 * 1000; // 24小时
-    setInterval(async () => {
+    const cleanupTimer = setInterval(async () => {
         try {
             await logger.cleanupOldLogs(30); // 保留30天日志
         } catch (error) {
@@ -155,10 +165,16 @@ const main = (rundir) => {
     }, cleanupInterval);
 
     // 优雅关闭
-    const shutdown = async () => {
-        logger.info('Shutting down backend server...', 'System');
+    const shutdown = async (signal) => {
+        logger.info(`Received ${signal}, shutting down backend server...`, 'System');
+        
+        // 清除定时器
+        clearInterval(cleanupTimer);
         
         try {
+            // 刷新日志队列
+            await logger.flush();
+            
             // 关闭数据库连接
             if (logDatabase) {
                 await logDatabase.close();
@@ -178,8 +194,9 @@ const main = (rundir) => {
     };
 
     // 注册关闭信号
-    process.on('SIGINT', shutdown);
-    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGHUP', () => shutdown('SIGHUP'));
 };
 
 export default main;

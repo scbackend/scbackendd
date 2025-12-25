@@ -1,13 +1,89 @@
+# 依赖目录
 node_modules/
 dist/
-# Logs
-logs
-npm-debug.log*
+build/
+
+# 日志文件
+logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# 运行时文件
 rundir/
-# Env files
+*.db
+*.sqlite
+*.sqlite3
+
+# 环境变量文件
 .env
-# Test coverage
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 配置文件（包含敏感信息）
+config.yml
+*.config.js
+*.config.json
+
+# 密钥文件
+*.key
+*.pem
+*.crt
+*.cert
+
+# 测试覆盖率
 coverage/
-# TypeScript build info
+.nyc_output/
+
+# TypeScript
 *.tsbuildinfo
+
+# 编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+tmp/
+temp/
+
+# 构建产物
+*.exe
+*.dmg
+*.pkg
+
+# 文档生成
+docs/_build/
+
+# 包管理器锁文件（可选，根据团队策略）
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# 备份文件
+*.bak
+*.backup
+
+# 性能分析文件
+*.cpuprofile
+*.heapsnapshot
+
+# 安全扫描报告
+security-report.html
+audit-report.json
+
+# 用户上传文件
+projects/
+plugins/
+
+# 缓存目录
+.cache/

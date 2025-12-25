@@ -7,7 +7,11 @@
     "dev": "nodemon ./src/index.js",
     "build": "tsup && pkg dist/scbackendd.cjs --out-path ./dist/bin --targets node18-linux-x64,node18-win-x64 --output-name scbackendd",
     "logs": "node ./src/log-query.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "audit": "npm audit",
+    "audit:fix": "npm audit fix",
+    "outdated": "npm outdated",
+    "security-check": "npx audit-ci --critical"
   },
   "bin": {
     "scbackendd": "./bin/scbackendd.js",
@@ -23,28 +27,53 @@
   ],
   "type": "module",
   "private": false,
-  "description": "",
+  "description": "Scratch Backend Server",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "dependencies": {
-    "better-sqlite3": "^7.6.2",
+    "better-sqlite3": "^9.0.0",
     "colyseus.js": "^0.16.22",
     "denque": "^2.1.0",
     "express": "^5.1.0",
-    "http": "^0.0.1-security",
+    "helmet": "^7.1.0",
     "js-yaml": "^4.1.0",
     "jszip": "^3.10.1",
     "mysql2": "^3.14.1",
-    "path": "^0.12.7",
-    "process": "^0.11.10",
+    "rate-limiter-flexible": "^3.0.8",
     "scbackend-vm": "^11.45.29",
-    "url": "^0.11.4",
     "ws": "^8.18.3",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "audit-ci": "^6.6.1",
     "esbuild": "^0.25.10",
     "javascript-obfuscator": "^4.1.1",
+    "nodemon": "^3.0.1",
     "pkg": "^5.8.1",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2"
-  }
+  },
+  "overrides": {
+    "js-yaml": "^4.1.0"
+  },
+  "resolutions": {
+    "js-yaml": "^4.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/XQYWorld/scbackendd.git"
+  },
+  "bugs": {
+    "url": "https://github.com/XQYWorld/scbackendd/issues"
+  },
+  "homepage": "https://github.com/XQYWorld/scbackendd#readme",
+  "files": [
+    "src/",
+    "bin/",
+    "public/",
+    "README.md",
+    "LICENSE"
+  ]
 }

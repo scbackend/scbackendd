@@ -11,7 +11,8 @@ import DatabaseMigrations from './database-migrations.js';
 
 // 生成安全的默认密码
 const generateDefaultPassword = () => {
-    return crypto.randomBytes(16).toString('hex');
+    // return crypto.randomBytes(16).toString('hex');
+    return 'scbackend/******'
 };
 
 const main = (rundir) => {

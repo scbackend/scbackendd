@@ -26,7 +26,7 @@ class Logger {
             fileLevel: config.fileLevel || LOG_LEVELS.WARN,       // 文件输出级别
             dbLevel: config.dbLevel || LOG_LEVELS.INFO,          // 数据库输出级别
             silentMode: config.silentMode || false,              // 静默模式
-            logToConsole: config.logToConsole !== false,         // 是否输出到控制台
+            logToConsole: config.logToConsole !== true,         // 是否输出到控制台
             logToFile: config.logToFile || true,                 // 是否输出到文件
             logToDatabase: config.logToDatabase || true,         // 是否输出到数据库
             maxFileSize: config.maxFileSize || 10 * 1024 * 1024, // 10MB

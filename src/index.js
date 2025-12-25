@@ -5,7 +5,7 @@ import Projects from './projects.js';
 import Service from './service.js';
 import logger, { Logger } from './logger.js';
 import Config from './config.js';
-import Plugin from './plugin.js';
+import PluginManager from './plugin.js';
 import Database from './database.js';
 import DatabaseMigrations from './database-migrations.js';
 
@@ -141,7 +141,7 @@ const main = (rundir) => {
     
     // 创建服务
     const service = new Service(SERVPORT, manager);
-    const pluginManager = new Plugin(manager, service, config.get('plugins'));
+    const pluginManager = new PluginManager(manager, service, config.get('plugins'));
     const server = new Server(DASHPORT, rundir, projects, manager, config.get(), pluginManager);
 
     // 启动服务
@@ -173,6 +173,11 @@ const main = (rundir) => {
         clearInterval(cleanupTimer);
         
         try {
+            // 清理插件
+            if (pluginManager.cleanup) {
+                pluginManager.cleanup();
+            }
+            
             // 刷新日志队列
             await logger.flush();
             

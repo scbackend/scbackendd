@@ -365,6 +365,146 @@ class Server {
       }
     });
 
+    // 插件管理路由
+    this.app.get('/plugin/info/:id', (req, res) => {
+      const pluginId = req.params.id;
+      
+      // 验证插件ID
+      if (!validateProjectId(pluginId)) {
+        res.status(400).json({ error: 'Invalid plugin ID' });
+        return;
+      }
+      
+      try {
+        const info = this.plugin.getPluginInfo(pluginId);
+        if (info) {
+          res.status(200).json(info);
+        } else {
+          res.status(404).json({ error: 'Plugin not found' });
+        }
+      } catch (error) {
+        logger.error(`Error getting plugin info: ${error.message}`, 'Server');
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.post('/plugin/enable/:id', express.json(), (req, res) => {
+      const pluginId = req.params.id;
+      const { runners = [] } = req.body;
+      
+      // 验证插件ID
+      if (!validateProjectId(pluginId)) {
+        res.status(400).json({ error: 'Invalid plugin ID' });
+        return;
+      }
+      
+      // 验证runners数组
+      if (!Array.isArray(runners)) {
+        res.status(400).json({ error: 'Runners must be an array' });
+        return;
+      }
+      
+      try {
+        this.plugin.enablePlugin(pluginId, runners);
+        res.status(200).json({ message: 'Plugin enabled successfully' });
+      } catch (error) {
+        logger.error(`Error enabling plugin: ${error.message}`, 'Server');
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.post('/plugin/disable/:id', (req, res) => {
+      const pluginId = req.params.id;
+      
+      // 验证插件ID
+      if (!validateProjectId(pluginId)) {
+        res.status(400).json({ error: 'Invalid plugin ID' });
+        return;
+      }
+      
+      try {
+        this.plugin.disablePlugin(pluginId);
+        res.status(200).json({ message: 'Plugin disabled successfully' });
+      } catch (error) {
+        logger.error(`Error disabling plugin: ${error.message}`, 'Server');
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.post('/plugin/reload/:id', (req, res) => {
+      const pluginId = req.params.id;
+      
+      // 验证插件ID
+      if (!validateProjectId(pluginId)) {
+        res.status(400).json({ error: 'Invalid plugin ID' });
+        return;
+      }
+      
+      try {
+        this.plugin.reloadPlugin(pluginId);
+        res.status(200).json({ message: 'Plugin reloaded successfully' });
+      } catch (error) {
+        logger.error(`Error reloading plugin: ${error.message}`, 'Server');
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.post('/plugin/enable-for-runner/:id/:runnerId', (req, res) => {
+      const pluginId = req.params.id;
+      const runnerId = req.params.runnerId;
+      
+      // 验证插件ID和runner ID
+      if (!validateProjectId(pluginId) || !/^[\w-]+$/.test(runnerId)) {
+        res.status(400).json({ error: 'Invalid plugin ID or runner ID' });
+        return;
+      }
+      
+      try {
+        this.plugin.enableForRunner(pluginId, runnerId);
+        res.status(200).json({ message: `Plugin ${pluginId} enabled for runner ${runnerId}` });
+      } catch (error) {
+        logger.error(`Error enabling plugin for runner: ${error.message}`, 'Server');
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.post('/plugin/disable-for-runner/:id/:runnerId', (req, res) => {
+      const pluginId = req.params.id;
+      const runnerId = req.params.runnerId;
+      
+      // 验证插件ID和runner ID
+      if (!validateProjectId(pluginId) || !/^[\w-]+$/.test(runnerId)) {
+        res.status(400).json({ error: 'Invalid plugin ID or runner ID' });
+        return;
+      }
+      
+      try {
+        this.plugin.disableForRunner(pluginId, runnerId);
+        res.status(200).json({ message: `Plugin ${pluginId} disabled for runner ${runnerId}` });
+      } catch (error) {
+        logger.error(`Error disabling plugin for runner: ${error.message}`, 'Server');
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    this.app.get('/runner/plugins/:runnerId', (req, res) => {
+      const runnerId = req.params.runnerId;
+      
+      // 验证runner ID
+      if (!/^[\w-]+$/.test(runnerId)) {
+        res.status(400).json({ error: 'Invalid runner ID' });
+        return;
+      }
+      
+      try {
+        const plugins = this.plugin.getPluginsForRunner(runnerId);
+        res.status(200).json(plugins);
+      } catch (error) {
+        logger.error(`Error getting plugins for runner: ${error.message}`, 'Server');
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
   }
 
   init() {
